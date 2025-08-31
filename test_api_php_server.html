@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHP Server API Test</title>
+</head>
+<body>
+    <h1>PHP Built-in Server API Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        const API_BASE_URL = 'http://localhost:8000/api';
+        
+        async function testAPI() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing API with PHP built-in server...</p>';
+            
+            try {
+                // Test 1: Check if we can reach the API
+                console.log('Testing API connectivity...');
+                console.log('API Base URL:', API_BASE_URL);
+                
+                // Test 2: Try to get products
+                const response = await fetch(`${API_BASE_URL}/getProducts`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultsDiv.innerHTML = `
+                        <h2>✅ API Test Successful!</h2>
+                        <p>Status: ${response.status}</p>
+                        <p>Products found: ${data.data ? data.data.length : 0}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    const data = await response.json();
+                    resultsDiv.innerHTML = `
+                        <h2>⚠️ API Responded but with Error</h2>
+                        <p>Status: ${response.status}</p>
+                        <p>Error: ${data.message || 'Unknown error'}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('API Test Error:', error);
+                resultsDiv.innerHTML = `
+                    <h2>❌ API Test Error</h2>
+                    <p>Error: ${error.message}</p>
+                    <p>This might mean:</p>
+                    <ul>
+                        <li>PHP built-in server is not running on port 8000</li>
+                        <li>API URL is incorrect</li>
+                        <li>Network connectivity issue</li>
+                        <li>CORS issue</li>
+                    </ul>
+                    <p><strong>Make sure to run:</strong> <code>php -S localhost:8000</code> in the dailyhub-main directory</p>
+                `;
+            }
+        }
+        
+        // Run test when page loads
+        testAPI();
+    </script>
+</body>
+</html>

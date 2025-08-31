@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SUMO — ჭკვიანი ფასდაკლებების აპლიკაცია, რომელიც დაგეხმარება დროისა და ფულის დაზოგვაში.">
+    <meta property="og:" content="SUMO - მალე შევხვდებით!">
+    <meta property="og:description" content="გაეცანი ჭკვიან შეთავაზებებს და შეარჩიე საუკეთესო. ჩამოწერე პირველებმა.">
+    <title>Sumo - მალე შევხვდებით!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Noto Sans Georgian", sans-serif;
+            font-optical-sizing: auto;
+            font-weight: 500;
+            font-style: normal;
+            font-variation-settings:
+                "wdth" 100;
+
+            background: linear-gradient(135deg, #273469 0%, #1e2952 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            padding: 40px 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        /* Floating elements for visual interest */
+        .floating-element {
+            position: absolute;
+            opacity: 0.1;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .floating-element:nth-child(1) {
+            top: 10%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .floating-element:nth-child(2) {
+            top: 20%;
+            right: 15%;
+            animation-delay: 2s;
+        }
+
+        .floating-element:nth-child(3) {
+            bottom: 30%;
+            left: 5%;
+            animation-delay: 4s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .main-content {
+            background: rgba(195, 66, 63, 0.01);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 80px 50px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .main-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgb(255 255 255 / 25%), transparent);
+        }
+
+        .logo-section {
+            margin-bottom: 50px;
+            position: relative;
+        }
+
+        .sumo-icon {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 30px;
+            background: linear-gradient(135deg, #c3423f, #e85a57);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            box-shadow: 0 15px 35px rgba(195, 66, 63, 0.4);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .logo {
+            font-size: 4.5rem;
+            font-weight: 900;
+            color: #ffffff;
+            margin-bottom: 15px;
+            letter-spacing: 6px;
+            text-shadow: 0 0 30px rgba(195, 66, 63, 0.3);
+        }
+
+        .logo-subtitle {
+            font-size: 1.2rem;
+            color: #c3423f;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .main-message {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 25px;
+            color: #ffffff;
+            line-height: 1.2;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .sub-message {
+            font-size: 1.4rem;
+            color: rgba(255, 255, 255, 0.85);
+            margin-bottom: 50px;
+            line-height: 1.6;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .launch-preview {
+            background: linear-gradient(135deg, rgba(195, 66, 63, 0.1), rgba(195, 66, 63, 0.05));
+            border: 2px solid rgba(195, 66, 63, 0.3);
+            border-radius: 20px;
+            padding: 40px 30px;
+            margin: 50px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .launch-preview::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .launch-badge {
+            display: inline-block;
+            background: #c3423f;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 10px rgba(195, 66, 63, 0.5); }
+            to { box-shadow: 0 0 20px rgba(195, 66, 63, 0.8); }
+        }
+
+        .countdown-section {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .countdown-item {
+            text-align: center;
+            background: rgba(195, 66, 63, 0.02);
+            padding: 20px 15px;
+            border-radius: 15px;
+            min-width: 80px;
+        }
+
+        .countdown-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #c3423f;
+            display: block;
+        }
+
+        .countdown-label {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .power-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 25px;
+            margin: 60px 0;
+        }
+
+        .power-card {
+            background: rgba(195, 66, 63, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 18px;
+            padding: 35px 25px;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .power-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(195, 66, 63, 0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .power-card:hover::before {
+            opacity: 1;
+        }
+
+        .power-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(195, 66, 63, 0.4);
+            box-shadow: 0 20px 40px rgba(195, 66, 63, 0.2);
+        }
+
+        .power-icon {
+            font-size: 2.8rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .power-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #c3423f;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .power-desc {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+        }
+
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 30px;
+            margin: 50px 0;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #c3423f;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .readiness-section {
+            background: rgba(195, 66, 63, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 50px 40px;
+            margin: 50px 0;
+            position: relative;
+        }
+
+        .readiness-title {
+            font-size: 2rem;
+            color: #c3423f;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .progress-ring {
+            width: 160px;
+            height: 160px;
+            margin: 30px auto;
+            position: relative;
+        }
+
+        .progress-ring svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring circle {
+            fill: none;
+            stroke-width: 10;
+        }
+
+        .progress-ring .bg {
+            stroke: rgba(255, 255, 255, 0.1);
+        }
+
+        .progress-ring .progress {
+            stroke: #c3423f;
+            stroke-linecap: round;
+            stroke-dasharray: 377;
+            stroke-dashoffset: 200;
+            transition: stroke-dashoffset 2s ease;
+            filter: drop-shadow(0 0 10px rgba(195, 66, 63, 0.5));
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            font-weight: 700;
+            color: #c3423f;
+        }
+
+        .notification-area {
+            background: rgba(195, 66, 63, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            padding: 50px 40px;
+            margin-top: 50px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .notification-title {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .notification-subtitle {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 40px;
+            margin: 40px 15px;
+        }
+
+        .early-access-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #c3423f, #e85a57);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(195, 66, 63, 0.3);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 15px;
+            max-width: 500px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+
+        .email-input {
+            flex: 1;
+            padding: 18px 25px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            font-size: 1rem;
+            background: rgba(195, 66, 63, 0.02);
+            color: #ffffff;
+            transition: all 0.3s ease;
+            min-width: 280px;
+        }
+
+        .email-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .email-input:focus {
+            outline: none;
+            border-color: #c3423f;
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 0 0 3px rgba(195, 66, 63, 0.2);
+        }
+
+        .join-btn {
+            background: linear-gradient(135deg, #c3423f, #e85a57);
+            color: #ffffff;
+            border: none;
+            padding: 18px 35px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .join-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .join-btn:hover::before {
+            left: 100%;
+        }
+
+        .join-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(195, 66, 63, 0.4);
+        }
+
+        .perks-list {
+            margin-top: 40px;
+            text-align: left;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .perk-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .perk-icon {
+            color: #c3423f;
+            margin-right: 15px;
+            font-size: 1.2rem;
+        }
+
+        .sumo-guide {
+            margin-top: 60px;
+            padding: 40px;
+            background: rgba(195, 66, 63, 0.02);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .guide-title {
+            font-size: 1.5rem;
+            color: #c3423f;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .guide-text {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.85);
+            line-height: 1.7;
+        }
+
+        .guide-avatar {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, #c3423f, #e85a57);
+            border-radius: 50%;
+            margin: 25px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            box-shadow: 0 10px 30px rgba(195, 66, 63, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 15px;
+            }
+            
+            .main-content {
+                padding: 50px 25px;
+            }
+            
+            .logo {
+                font-size: 3.5rem;
+                letter-spacing: 4px;
+            }
+            
+            .main-message {
+                font-size: 1.5rem;
+            }
+            
+            .sub-message {
+                font-size: 1.2rem;
+            }
+            
+            .power-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .stats-section {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+            
+            .countdown-section {
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+            
+            .countdown-item {
+                min-width: 70px;
+                padding: 15px 10px;
+            }
+            
+            .input-group {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .email-input {
+                width: 100%;
+                min-width: auto;
+            }
+            
+            .join-btn {
+                width: 100%;
+                max-width: 300px;
+            }
+            
+            .perks-list {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating decorative elements -->
+    <div class="floating-element" style="font-size: 3rem;">🥋</div>
+    <div class="floating-element" style="font-size: 2rem;">⚡</div>
+    <div class="floating-element" style="font-size: 2.5rem;">🏆</div>
+
+    <div class="container">
+        <div class="main-content">
+            <div class="logo-section">
+                <div class="sumo-icon">🥋</div>
+                <div class="logo">SUMO</div>
+                <div class="logo-subtitle">მალე შევხვდებით!</div>
+            </div>
+            
+            <h3 class="main-message">შეთავაზებები, რომლებიც შენ გარშემო იმალება</h3>
+            <p class="sub-message">
+               SUMO საშუალებას გაძლევს აღმოაჩინო, შეადარო და მოიძიო ყველა ფასდაკლება ერთ სივრცეში. ჩვენ ვაერთიანებთ სხვადასხვა მაღაზიების შეთავაზებებს, გირჩევთ საუკეთესოს და გეხმარებით დაზოგვაში — ჭკვიანად, ლოკალურად, რეალურ დროში.
+            </p>
+            
+            <div class="launch-preview">
+                <div class="launch-badge">🔥 Development Phase</div>
+                <div class="vision-section">
+                    <h3 style="color: #c3423f; font-size: 1.5rem; margin-bottom: 20px;">რას ველოდებით?</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 30px;">
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">🎯</div>
+                            <div style="color: rgba(255,255,255,0.9); font-size: 1rem;">ყოველდღიურ ჭკვიან შეთავაზებებს</div>
+                        </div>
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">📍</div>
+                            <div style="color: rgba(255,255,255,0.9); font-size: 1rem;">ლოკალური ბიზნესების მხარდაჭერას</div>
+                        </div>
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">🤖</div>
+                            <div style="color: rgba(255,255,255,0.9); font-size: 1rem;">AI-powered პერსონალიზაციას</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="power-grid">
+                <div class="power-card">
+                    <span class="power-icon">💪</span>
+                    <div class="power-title">ძალა</div>
+                    <!-- <div class="power-desc">ძლიერი ალგორითმები და ინტელექტუალური ძიება</div> -->
+                </div> 
+                <div class="power-card">
+                    <span class="power-icon">⚡</span>
+                    <div class="power-title">სისწრაფე</div>
+                    <!-- <div class="power-desc">მყისიერი შეთავაზებები და განახლებები</div> -->
+                </div>
+                <div class="power-card">
+                    <span class="power-icon">🎯</span>
+                    <div class="power-title">სიზუსტე</div>
+                    <!-- <div class="power-desc">პერსონალიზებული რეკომენდაციები მხოლოდ თქვენთვის</div> -->
+                </div>
+                <div class="power-card">
+                    <span class="power-icon">🏆</span>
+                    <div class="power-title">გამარჯვება</div>
+                    <!-- <div class="power-desc">მაქსიმალური დაზოგვა ყოველ შესყიდვაზე</div> -->
+                </div>
+            </div>
+            
+            <div class="readiness-section">
+                <div class="readiness-title">🥋 პროცესი</div>
+                <div class="progress-ring">
+                    <svg>
+                        <circle class="bg" cx="80" cy="80" r="60"></circle>
+                        <circle class="progress" cx="80" cy="80" r="60"></circle>
+                    </svg>
+                    <div class="progress-text">70%</div>
+                </div>
+                <p style="color: rgba(255,255,255,0.8); margin-top: 20px; font-size: 1.1rem;">
+                    ჩვენ ვემზადებით თქვენთან შესახვედრად
+                </p>
+            </div>
+            
+            <div class="notification-area">
+                <div class="early-access-badge">⚡ Early Access</div>
+                <h2 class="notification-title">🔥 შემოგვიერთდი</h2>
+                <p class="notification-subtitle">იყავი პირველი, ვინც მიიღებს განახლებულ ინფორმაციას ეტაპობრივად და ჩაერთვება პროექტის განვითარებაში</p>
+                
+                <form class="input-group" onsubmit="handleSubmit(event)">
+                    <input type="email" class="email-input" placeholder="თქვენი ელ-ფოსტა..." required>
+                    <button type="submit" class="join-btn">გაგზავნა</button>
+                </form>
+                
+                <div class="perks-list">
+                    <div class="perk-item">
+                        <span class="perk-icon">🎯</span>
+                        <span>Launch-ის თარიღის გაგება</span>
+                    </div>
+                    <div class="perk-item">
+                        <span class="perk-icon">💡</span>
+                        <span>Development Process-ში თქვენი აზრის გაზიარება</span>
+                    </div>
+                    <div class="perk-item">
+                        <span class="perk-icon">🏗️</span>
+                        <span>Beta Testing-ში მონაწილეობის შანსი</span>
+                    </div>
+                    <div class="perk-item">
+                        <span class="perk-icon">🎁</span>
+                        <span>Launch Day-ზე სპეციალური welcome ბონუსი</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sumo-guide">
+                <div class="guide-avatar">🥷</div>
+                <div class="guide-title">სუმოისტი ბიჭუნა</div>
+                <p class="guide-text">
+                    "როგორც სუმოში, სწორ გადაწყვეტილებას დრო და ფოკუსი სჭირდება.
+                    SUMO დაგეხმარება, რომ არ დაკარგო წონასწორობა — აირჩიო საუკეთესო შეთავაზებები, დაზოგო დრო, ფული და ყოველთვის ზუსტად მიზანში მოარტყა."
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function handleSubmit(event) {
+            event.preventDefault();
+            const email = event.target.querySelector('.email-input').value;
+            const button = event.target.querySelector('.join-btn');
+            const originalText = button.textContent;
+            
+            button.textContent = 'გაწევრიანება...';
+            button.style.background = 'linear-gradient(135deg, #27ae60, #2ecc71)';
+            
+            setTimeout(() => {
+                button.textContent = 'შენთან ერთად ძლიერდება SUMO! 🥋';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = 'linear-gradient(135deg, #c3423f, #e85a57)';
+                    event.target.reset();
+                }, 2500);
+            }, 1500);
+        }
+        
+        // Progress ring animation on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const progressRing = document.querySelector('.progress-ring .progress');
+                progressRing.style.strokeDashoffset = '120'; // 85% progress
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

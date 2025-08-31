@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Test Page</h1>
+    <div id="results"></div>
+    
+    <script>
+        const API_BASE_URL = 'http://localhost:8000/api';
+        
+        // Get token from localStorage
+        const token = localStorage.getItem('auth_token');
+        
+        async function testAPI() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing API...</p>';
+            
+            try {
+                // Test 1: Check if we can reach the API
+                console.log('Testing API connectivity...');
+                console.log('API Base URL:', API_BASE_URL);
+                console.log('Token:', token ? 'Present' : 'Missing');
+                
+                // Test 2: Try to get products
+                const response = await fetch(`${API_BASE_URL}/getProducts`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token ? `Bearer ${token}` : ''
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (response.ok) {
+                    resultsDiv.innerHTML = `
+                        <h2>✅ API Test Successful</h2>
+                        <p>Status: ${response.status}</p>
+                        <p>Products found: ${data.data ? data.data.length : 0}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = `
+                        <h2>❌ API Test Failed</h2>
+                        <p>Status: ${response.status}</p>
+                        <p>Error: ${data.message || 'Unknown error'}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('API Test Error:', error);
+                resultsDiv.innerHTML = `
+                    <h2>❌ API Test Error</h2>
+                    <p>Error: ${error.message}</p>
+                    <p>This might mean:</p>
+                    <ul>
+                        <li>Backend server is not running</li>
+                        <li>API URL is incorrect</li>
+                        <li>Network connectivity issue</li>
+                        <li>CORS issue</li>
+                    </ul>
+                `;
+            }
+        }
+        
+        // Run test when page loads
+        testAPI();
+    </script>
+</body>
+</html>

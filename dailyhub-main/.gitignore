@@ -1,0 +1,31 @@
+# Composer dependencies
+/vendor/
+
+# Composer files (lock file is usually kept for applications)
+#/composer.lock
+
+# PHP unit testing files
+phpunit.xml
+phpunit.xml.dist
+
+# Build, coverage, and cache directories
+/build/
+/coverage/
+/cache/
+/tmp/
+
+# Environment and configuration files (if not intended to be public)
+#.env
+
+# IDEs and editors
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Node modules (if you're using Node for front-end tasks)
+node_modules/

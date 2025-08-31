@@ -1,0 +1,16 @@
+{
+  "name": "dailyhub-backend",
+  "description": "PHP Backend API for DailyHub",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "php -S localhost:8000 -t .",
+    "dev": "php -S localhost:8000 -t .",
+    "install-deps": "composer install",
+    "update-deps": "composer update"
+  },
+  "devDependencies": {},
+  "engines": {
+    "php": ">=8.0"
+  }
+}
+
