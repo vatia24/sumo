@@ -5,7 +5,7 @@
 
     RewriteEngine On
 
-    DirectoryIndex index.php index.html
+    DirectoryIndex index.html
 
     # Redirect Trailing Slashes If Not A Folder...
     RewriteCond %{REQUEST_FILENAME} !-d

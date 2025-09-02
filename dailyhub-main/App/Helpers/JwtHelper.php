@@ -21,6 +21,7 @@ class JwtHelper
             'iss' => 'discount',       // Issuer
             'iat' => time(),               // Issued at
             'exp' => time() + self::getConfig()['jwt_expiration'], // Expiration
+            'jti' => bin2hex(random_bytes(16)), // Token ID for revocation/auditing
             'data' => $data,               // Custom data (e.g., user info)
         ];
 

@@ -205,6 +205,15 @@ class ProductModel
     public function deleteProduct(int $productId): bool
     {
         try {
+            // Unlink images on disk first
+            $imgStmt = $this->db->prepare('SELECT path FROM product_images WHERE product_id = :pid');
+            $imgStmt->bindValue(':pid', $productId, PDO::PARAM_INT);
+            $imgStmt->execute();
+            $paths = $imgStmt->fetchAll(PDO::FETCH_COLUMN);
+            $imgStmt->closeCursor();
+            foreach ($paths as $p) {
+                if (!empty($p)) @unlink($p);
+            }
             $statement = $this->db->prepare(
                 'DELETE FROM product WHERE id = :productId'
             );
@@ -505,6 +514,17 @@ class ProductModel
     public function deleteImage(int $imageId): bool
     {
         try {
+            // Lookup path to unlink file from disk
+            $lookup = $this->db->prepare('SELECT path FROM product_images WHERE id = :id');
+            $lookup->bindValue(':id', $imageId, PDO::PARAM_INT);
+            $lookup->execute();
+            $row = $lookup->fetch(PDO::FETCH_ASSOC);
+            $lookup->closeCursor();
+
+            if ($row && !empty($row['path'])) {
+                @unlink($row['path']);
+            }
+
             $stmt = $this->db->prepare('DELETE FROM product_images WHERE id = :id');
             $stmt->bindValue(':id', $imageId, PDO::PARAM_INT);
             return $stmt->execute();

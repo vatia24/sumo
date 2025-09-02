@@ -49,18 +49,7 @@ class UserService
 
         $this->authService->sendOtp($data['mobile']);
 
-        // Get the created user data
-        $createdUser = $this->userModel->findUserByMailOrNumber($data['email'], $data['mobile']);
-        
-        return [
-            'status' => 'success', 
-            'user_id' => $userId,
-            'user' => [
-                'id' => $createdUser['id'],
-                'identifier' => $createdUser['email'] ?? $createdUser['mobile'],
-                'role' => $createdUser['user_type']
-            ]
-        ];
+        return ['status' => 'success', 'user_id' => $userId];
     }
 
 

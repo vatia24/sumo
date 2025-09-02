@@ -43,8 +43,7 @@ class Db
         }
         return self::$instance;
     }
-}
-//class Db
+}//class Db
 //{
 //    private static ?PDO $instance = null;
 //

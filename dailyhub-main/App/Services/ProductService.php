@@ -70,15 +70,32 @@ class ProductService
     {
         $token = $this->authService->authorizeRequest();
         $userId = $token->data->id;
-        // RBAC: Owner/Manager of company only
-        $role = $this->companyModel->getUserRoleForCompany((int)$userId, (int)$data['company_id']);
-        if (!in_array($role, ['Owner','Manager'], true)) {
-            throw new ApiException(403, 'FORBIDDEN', 'Insufficient permissions');
-        }
+
         $payload = $data;
-        if (empty($payload['id'])) {
+        unset($payload['user_id']);
+
+        // Update path: authorize against existing product's company and prevent cross-tenant move
+        if (!empty($payload['id'])) {
+            $existing = $this->productModel->getById((int)$payload['id']);
+            if (!$existing) throw new ApiException(404, 'NOT_FOUND', 'Product not found');
+            $role = $this->companyModel->getUserRoleForCompany((int)$userId, (int)$existing['company_id']);
+            if (!in_array($role, ['Owner','Manager'], true)) {
+                throw new ApiException(403, 'FORBIDDEN', 'Insufficient permissions');
+            }
+            // Do not allow changing company_id via this endpoint
+            if (isset($payload['company_id'])) unset($payload['company_id']);
+        } else {
+            // Create path: require company_id and authorize
+            if (empty($payload['company_id'])) {
+                throw new ApiException(400, 'BAD_REQUEST', 'company_id is required');
+            }
+            $role = $this->companyModel->getUserRoleForCompany((int)$userId, (int)$payload['company_id']);
+            if (!in_array($role, ['Owner','Manager'], true)) {
+                throw new ApiException(403, 'FORBIDDEN', 'Insufficient permissions');
+            }
             $payload['user_id'] = (int)$userId;
         }
+
         $id = $this->productModel->upsertProduct($payload);
         return ['id' => $id];
     }

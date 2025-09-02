@@ -10,7 +10,9 @@ import {
   HelpCircle, 
   Settings,
   ChevronRight,
-  Coffee
+  Coffee,
+  Package,
+  Building2
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -22,6 +24,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage = 'dashboard', onPageChang
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', id: 'dashboard', active: activePage === 'dashboard', badge: '5' },
     { icon: Tag, label: 'Offers', id: 'offers', active: activePage === 'offers' },
+    { icon: Package, label: 'Product Management', id: 'product-management', active: activePage === 'product-management' },
+    { icon: Building2, label: 'Company Management', id: 'company-management', active: activePage === 'company-management' },
     { icon: BarChart3, label: 'Analytics', id: 'analytics', active: activePage === 'analytics' },
     { icon: Bell, label: 'Push Notifications', id: 'notifications', active: activePage === 'notifications' },
     { icon: Star, label: 'Featured', id: 'featured', active: activePage === 'featured' },

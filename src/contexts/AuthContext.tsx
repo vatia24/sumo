@@ -86,8 +86,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }) => {
     try {
       setIsLoading(true);
-      const response = await apiService.registerUser(userData);
-      setUser(response.user);
+      await apiService.registerUser(userData);
+      // Registration successful, but no user data returned
+      // User will need to verify their account before they can log in
     } catch (error) {
       console.error('Registration failed:', error);
       throw error;
@@ -99,8 +100,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const verifyCustomer = async (mobile: string, otp: string) => {
     try {
       setIsLoading(true);
-      const response = await apiService.verifyCustomer(mobile, otp);
-      setUser(response.user);
+      await apiService.verifyCustomer(mobile, otp);
+      // Verification successful, but no user data returned
+      // User will need to log in after verification
     } catch (error) {
       console.error('Verification failed:', error);
       throw error;

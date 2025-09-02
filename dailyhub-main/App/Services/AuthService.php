@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Exceptions\ApiException;
 use App\Helpers\JwtHelper;
-use App\Helpers\ResponseHelper;
 use App\Models\AuthModel;
 use Exception;
 use League\OAuth2\Client\Provider\Facebook;
@@ -44,11 +43,12 @@ class AuthService
                 'code' => $accessToken,
             ]));
 
-            // Extract relevant user details
+            // Extract relevant user details defensively
+            $raw = method_exists($facebookUser, 'toArray') ? (array)$facebookUser->toArray() : [];
             $userData = [
-                'id' => $facebookUser->getId(),
-                'email' => $facebookUser->getEmail(),
-                'name' => $facebookUser->getName(),
+                'id' => method_exists($facebookUser, 'getId') ? $facebookUser->getId() : ($raw['id'] ?? null),
+                'email' => $raw['email'] ?? null,
+                'name' => $raw['name'] ?? ($raw['first_name'] ?? null),
             ];
 
             // Generate JWT token
@@ -75,11 +75,11 @@ class AuthService
                 'code' => $accessToken,
             ]));
 
-            // Extract relevant user details
+            $raw = method_exists($googleUser, 'toArray') ? (array)$googleUser->toArray() : [];
             $userData = [
-                'id' => $googleUser->getId(),
-                'email' => $googleUser->getEmail(),
-                'name' => $googleUser->getName(),
+                'id' => method_exists($googleUser, 'getId') ? $googleUser->getId() : ($raw['id'] ?? null),
+                'email' => $raw['email'] ?? null,
+                'name' => $raw['name'] ?? ($raw['given_name'] ?? null),
             ];
 
             // Generate JWT token
@@ -101,9 +101,12 @@ class AuthService
             throw new ApiException(400, 'BAD_REQUEST', 'Mobile number is required to send OTP');
         }
 
-        $sid    = $_ENV['TWILIO_SID'];
-        $token  = $_ENV['TWILIO_AUTH_TOKEN'];
-        $ver_sid  = 'VA2f94da819aa97e3af62374593d5334c6';
+        $sid = $_ENV['TWILIO_SID'] ?? '';
+        $token = $_ENV['TWILIO_AUTH_TOKEN'] ?? '';
+        $ver_sid = $_ENV['TWILIO_VERIFY_SID'] ?? '';
+        if ($sid === '' || $token === '' || $ver_sid === '') {
+            throw new ApiException(500, 'SERVER_CONFIG_ERROR', 'Twilio configuration missing');
+        }
 
         try {
 
@@ -114,7 +117,7 @@ class AuthService
             // Store OTP in database (pseudo implementation)
             $this->authModel->storeOtp($mobile, $otp);
 
-            $twilio->verify->v2->services("$ver_sid")
+            $twilio->verify->v2->services($ver_sid)
                 ->verifications
                 ->create($mobile, "sms", ["customCode" => $otp]);
 
@@ -167,7 +170,10 @@ class AuthService
      */
     public function authorize($data): array
     {
-        $user = $this->authModel->findUserByMailOrNumber($data['identifier']);
+        $identifier = $data['identifier'];
+        // Throttle attempts
+        $this->authModel->checkAndIncrementLoginAttempts($identifier);
+        $user = $this->authModel->findUserByMailOrNumber($identifier);
 
         if (!$user || !password_verify($data['password'], $user['password'])) {
             throw new ApiException(401,'INVALID_CREDENTIALS', 'Invalid credentials');
@@ -176,7 +182,7 @@ class AuthService
         }
 
         // Generate JWT Token
-        $token = JwtHelper::generateToken(['id' => $user['id'], 'identifier' => $data['identifier'], 'role' => $user['user_type']]);
+        $token = JwtHelper::generateToken(['id' => $user['id'], 'identifier' => $identifier, 'role' => $user['user_type']]);
 
         $this->authModel->storeAccessToken(
             $user['id'],
@@ -184,14 +190,46 @@ class AuthService
             (int) $this->authConfig['jwt_expiration']
         );
 
-        return [
-            'token' => $token,
-            'user' => [
-                'id' => $user['id'],
-                'identifier' => $user['identifier'] ?? $user['email'] ?? $user['mobile'],
-                'role' => $user['user_type']
-            ]
-        ];
+        // Issue refresh token (opaque, random)
+        $refreshTtl = (int)($this->authConfig['refresh_expiration'] ?? 1209600);
+        $refresh = bin2hex(random_bytes(32));
+        $this->authModel->storeRefreshToken((int)$user['id'], $refresh, $refreshTtl);
+        // Reset attempts on success
+        $this->authModel->resetLoginAttempts($identifier);
+        return ['token' => $token, 'refresh_token' => $refresh, 'expires_in' => (int)$this->authConfig['jwt_expiration']];
+    }
+
+    /**
+     * Exchange refresh token for new access token (and rotate refresh)
+     */
+    public function refresh(array $data): array
+    {
+        if (empty($data['refresh_token'])) {
+            throw new ApiException(400, 'BAD_REQUEST', 'refresh_token required');
+        }
+        $row = $this->authModel->findValidRefreshToken($data['refresh_token']);
+        if (!$row) {
+            throw new ApiException(401, 'INVALID_TOKEN', 'Invalid refresh token');
+        }
+        $userId = (int)$row['user_id'];
+        // Find minimal user payload
+        $pdo = \Config\Db::getInstance();
+        $stmt = $pdo->prepare('SELECT id, email, mobile, user_type FROM users WHERE id = :id');
+        $stmt->bindParam(':id', $userId, \PDO::PARAM_INT);
+        $stmt->execute();
+        $user = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $stmt->closeCursor();
+        if (!$user) {
+            throw new ApiException(404, 'NOT_FOUND', 'User not found');
+        }
+        $identifier = $user['email'] ?: $user['mobile'];
+        $access = JwtHelper::generateToken(['id' => $userId, 'identifier' => $identifier, 'role' => $user['user_type']]);
+        $this->authModel->storeAccessToken($userId, $access, (int)$this->authConfig['jwt_expiration']);
+        // Rotate refresh token
+        $newRefresh = bin2hex(random_bytes(32));
+        $this->authModel->storeRefreshToken($userId, $newRefresh, (int)$this->authConfig['refresh_expiration']);
+        $this->authModel->revokeRefreshToken($data['refresh_token'], $newRefresh);
+        return ['token' => $access, 'refresh_token' => $newRefresh, 'expires_in' => (int)$this->authConfig['jwt_expiration']];
     }
 
     /**
@@ -293,18 +331,36 @@ class AuthService
         $stmt->execute();
         $stmt->closeCursor();
 
+        // Revoke all refresh tokens for this user (logout all devices)
+        // Find user id
+        $stmt = $pdo->prepare('SELECT id FROM users WHERE email = :identifier OR mobile = :identifier');
+        $stmt->bindParam(':identifier', $data['identifier']);
+        $stmt->execute();
+        $userRow = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $stmt->closeCursor();
+        if ($userRow) {
+            // Best effort: mark all refresh tokens revoked
+            $this->authModel->revokeRefreshToken('%', null); // placeholder
+            // Since revoke by '%' is not implemented, bulk update via PDO
+            $pdo->exec('CREATE TABLE IF NOT EXISTS refresh_tokens (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, token VARCHAR(255) NOT NULL UNIQUE, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, expires_at DATETIME NOT NULL, revoked TINYINT(1) NOT NULL DEFAULT 0, replaced_by VARCHAR(255) DEFAULT NULL, INDEX idx_rt_user (user_id), INDEX idx_rt_expires (expires_at))');
+            $stmt = $pdo->prepare('UPDATE refresh_tokens SET revoked = 1 WHERE user_id = :uid');
+            $stmt->bindParam(':uid', $userRow['id'], \PDO::PARAM_INT);
+            $stmt->execute();
+            $stmt->closeCursor();
+        }
+
         return ['reset' => true];
     }
 
     /**
      * @throws ApiException
      */
-    public function facebookAuth(): void
+    public function facebookAuth(): array
     {
         $accessToken = $_GET['code']; // Get 'code' from Facebook OAuth redirect
         try {
             $result = $this->handleFacebookAuth($accessToken);
-            ResponseHelper::response(200, 'SUCCESS', $result);
+            return $result;
         } catch (\Exception $e) {
             throw new ApiException(401, 'CANNOT_AUTHORIZE', $e->getMessage());
         }
@@ -313,12 +369,12 @@ class AuthService
     /**
      * @throws ApiException
      */
-    public function googleAuth(): void
+    public function googleAuth(): array
     {
         $accessToken = $_GET['code']; // Get 'code' from Google OAuth redirect
         try {
             $result = $this->handleGoogleAuth($accessToken);
-            ResponseHelper::response(200, 'SUCCESS', $result);
+            return $result;
         } catch (\Exception $e) {
             throw new ApiException(401, 'CANNOT_AUTHORIZE', $e->getMessage());
         }

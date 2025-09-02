@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Endpoints Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .endpoint { margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .pending { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 8px 16px; margin: 5px; cursor: pointer; }
+        .results { margin-top: 10px; font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>API Endpoints Test</h1>
+    <p>This page tests all the company-related API endpoints to ensure they are working correctly.</p>
+    
+    <div>
+        <label for="apiUrl">API Base URL:</label>
+        <input type="text" id="apiUrl" value="http://localhost:8000/api" style="width: 300px;">
+        <button onclick="testAllEndpoints()">Test All Endpoints</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000/api';
+        let authToken = null;
+
+        async function testAllEndpoints() {
+            const baseUrl = document.getElementById('apiUrl').value;
+            clearResults();
+            
+            // Test authentication first
+            await testEndpoint('POST', `${baseUrl}/authorize`, {
+                identifier: 'test@example.com',
+                password: 'password123'
+            }, 'Authentication');
+
+            if (authToken) {
+                // Test all company endpoints
+                await testEndpoint('GET', `${baseUrl}/getUserCompany`, null, 'Get User Company');
+                await testEndpoint('POST', `${baseUrl}/upsertCompany`, {
+                    full_name: 'Test Company',
+                    address: '123 Test St',
+                    city: 'Test City',
+                    postal_code: '12345',
+                    country: 'Test Country'
+                }, 'Upsert Company');
+                await testEndpoint('POST', `${baseUrl}/setCompanyHours`, {
+                    company_id: 1,
+                    hours: [
+                        { day_of_week: 1, open_time: '09:00', close_time: '17:00', is_closed: false },
+                        { day_of_week: 2, open_time: '09:00', close_time: '17:00', is_closed: false }
+                    ]
+                }, 'Set Company Hours');
+                await testEndpoint('GET', `${baseUrl}/getCompanyHours?company_id=1`, null, 'Get Company Hours');
+                await testEndpoint('POST', `${baseUrl}/addCompanySocial`, {
+                    company_id: 1,
+                    platform: 'Facebook',
+                    url: 'https://facebook.com/testcompany'
+                }, 'Add Company Social');
+                await testEndpoint('GET', `${baseUrl}/listCompanySocials?company_id=1`, null, 'List Company Socials');
+                await testEndpoint('POST', `${baseUrl}/addCompanyGallery`, {
+                    company_id: 1,
+                    file_base64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+                }, 'Add Company Gallery');
+                await testEndpoint('GET', `${baseUrl}/listCompanyGallery?company_id=1`, null, 'List Company Gallery');
+                await testEndpoint('POST', `${baseUrl}/addCompanyDocument`, {
+                    company_id: 1,
+                    doc_type: 'Business License',
+                    file_base64: 'data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsO8DQoxIDAgb2JqDQo8PA0KL1R5cGUgL0NhdGFsb2cNCi9QYWdlcyAyIDAgUg0KPj4NCmVuZG9iag0KMiAwIG9iag0KPDwNCi9UeXBlIC9QYWdlcw0KL0NvdW50IDENCi9LaWRzIFsgMyAwIFIgXQ0KPj4NCmVuZG9iag0KMyAwIG9iag0KPDwNCi9UeXBlIC9QYWdlDQovUGFyZW50IDIgMCBSDQovUmVzb3VyY2VzIDw8DQovRm9udCA8PA0KL0YxIDQgMCBSDQo+Pg0KPj4NCi9Db250ZW50cyA1IDAgUg0KL01lZGlhQm94IFsgMCAwIDYxMiA3OTIgXQ0KPj4NCmVuZG9iag0KNCAwIG9iag0KPDwNCi9UeXBlIC9Gb250DQovU3VidHlwZSAvVHlwZTENCi9CYXNlRm9udCAvVGltZXMtUm9tYW4NCi9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nDQo+Pg0KZW5kb2JqDQo1IDAgb2JqDQo8PA0KL0xlbmd0aCA0NA0KPj4NCnN0cmVhbQ0KQlQNCjEwIDAgMCBUZA0KL0YxIDEyIFRqDQpUZXN0IFBERiBGaWxlDQpFVA0KZW5kc3RyZWFtDQplbmRvYmoNCnhyZWYNCjAgNg0KMDAwMDAwMDAwMCA2NTUzNSBmDQowMDAwMDAwMDEwIDAwMDAwIG4NCjAwMDAwMDAwNzkgMDAwMDAgbg0KMDAwMDAwMDE3MyAwMDAwMCBuDQowMDAwMDAwMzAxIDAwMDAwIG4NCjAwMDAwMDAzODAgMDAwMDAgbg0KdHJhaWxlcg0KPDwNCi9TaXplIDYNCi9Sb290IDEgMCBSDQo+Pg0Kc3RhcnR4cmVmDQo0OTINCiUlRU9G'
+                }, 'Add Company Document');
+                await testEndpoint('GET', `${baseUrl}/listCompanyDocuments?company_id=1`, null, 'List Company Documents');
+                await testEndpoint('POST', `${baseUrl}/upsertDeliveryZone`, {
+                    company_id: 1,
+                    name: 'Test Zone',
+                    zone_type: 'radius',
+                    center_lat: 40.7128,
+                    center_lng: -74.0060,
+                    radius_m: 5000
+                }, 'Upsert Delivery Zone');
+                await testEndpoint('GET', `${baseUrl}/listDeliveryZones?company_id=1`, null, 'List Delivery Zones');
+                await testEndpoint('POST', `${baseUrl}/upsertBranch`, {
+                    company_id: 1,
+                    branch_name: 'Test Branch',
+                    branch_address: '456 Test Ave'
+                }, 'Upsert Branch');
+                await testEndpoint('GET', `${baseUrl}/listBranches?company_id=1`, null, 'List Branches');
+                await testEndpoint('POST', `${baseUrl}/addContact`, {
+                    company_id: 1,
+                    phone: '+1-555-123-4567',
+                    email: 'contact@testcompany.com',
+                    address: '789 Test Blvd'
+                }, 'Add Contact');
+                await testEndpoint('GET', `${baseUrl}/listContacts?company_id=1`, null, 'List Contacts');
+            }
+        }
+
+        async function testEndpoint(method, url, data, description) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'endpoint pending';
+            resultDiv.innerHTML = `
+                <strong>${description}</strong> (${method} ${url.split('/').pop()})
+                <div class="results">Testing...</div>
+            `;
+            document.getElementById('results').appendChild(resultDiv);
+
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+
+                const options = {
+                    method: method,
+                    headers: headers
+                };
+
+                if (data && method !== 'GET') {
+                    options.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(url, options);
+                const responseData = await response.json();
+
+                if (response.ok) {
+                    resultDiv.className = 'endpoint success';
+                    resultDiv.querySelector('.results').innerHTML = `
+                        ✅ Success (${response.status})
+                        <br>Response: ${JSON.stringify(responseData, null, 2)}
+                    `;
+
+                    // Store auth token if this was the auth endpoint
+                    if (description === 'Authentication' && responseData.data?.token) {
+                        authToken = responseData.data.token;
+                    }
+                } else {
+                    resultDiv.className = 'endpoint error';
+                    resultDiv.querySelector('.results').innerHTML = `
+                        ❌ Error (${response.status})
+                        <br>Response: ${JSON.stringify(responseData, null, 2)}
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'endpoint error';
+                resultDiv.querySelector('.results').innerHTML = `
+                    ❌ Network Error
+                    <br>Error: ${error.message}
+                `;
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            authToken = null;
+        }
+
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            console.log('API Endpoints Test Page Loaded');
+            console.log('Click "Test All Endpoints" to begin testing');
+        });
+    </script>
+</body>
+</html>

@@ -88,4 +88,103 @@ class AuthModel
         return $exists;
     }
 
+    /**
+     * Refresh token storage (opaque tokens)
+     */
+    private function ensureRefreshTable(): void
+    {
+        $sql = 'CREATE TABLE IF NOT EXISTS refresh_tokens (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            token VARCHAR(255) NOT NULL UNIQUE,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            expires_at DATETIME NOT NULL,
+            revoked TINYINT(1) NOT NULL DEFAULT 0,
+            replaced_by VARCHAR(255) DEFAULT NULL,
+            INDEX idx_rt_user (user_id),
+            INDEX idx_rt_expires (expires_at),
+            CONSTRAINT fk_rt_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;';
+        $this->db->exec($sql);
+    }
+
+    public function storeRefreshToken(int $userId, string $token, int $expiresInSeconds): void
+    {
+        $this->ensureRefreshTable();
+        $stmt = $this->db->prepare('INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (:uid, :token, DATE_ADD(NOW(), INTERVAL :exp SECOND))');
+        $stmt->bindParam(':uid', $userId, PDO::PARAM_INT);
+        $stmt->bindParam(':token', $token, PDO::PARAM_STR);
+        $stmt->bindParam(':exp', $expiresInSeconds, PDO::PARAM_INT);
+        $stmt->execute();
+        $stmt->closeCursor();
+    }
+
+    public function findValidRefreshToken(string $token): ?array
+    {
+        $this->ensureRefreshTable();
+        $stmt = $this->db->prepare('SELECT id, user_id, token, expires_at, revoked, replaced_by FROM refresh_tokens WHERE token = :token AND expires_at > NOW() LIMIT 1');
+        $stmt->bindParam(':token', $token, PDO::PARAM_STR);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt->closeCursor();
+        if (!$row || (int)$row['revoked'] === 1 || !empty($row['replaced_by'])) {
+            return null;
+        }
+        return $row;
+    }
+
+    public function revokeRefreshToken(string $token, ?string $replacedBy = null): void
+    {
+        $this->ensureRefreshTable();
+        $stmt = $this->db->prepare('UPDATE refresh_tokens SET revoked = 1, replaced_by = :rep WHERE token = :token');
+        $stmt->bindParam(':rep', $replacedBy);
+        $stmt->bindParam(':token', $token);
+        $stmt->execute();
+        $stmt->closeCursor();
+    }
+
+    /**
+     * Simple login attempt limiter using user_limits (keyed by identifier)
+     */
+    public function checkAndIncrementLoginAttempts(string $identifier, int $windowSeconds = 900, int $maxAttempts = 10): void
+    {
+        // Create row if not exists
+        $stmt = $this->db->prepare('INSERT INTO user_limits (username, limit_check, updated_at) VALUES (:u, 0, NOW()) ON DUPLICATE KEY UPDATE username = username');
+        $stmt->bindParam(':u', $identifier);
+        $stmt->execute();
+        $stmt->closeCursor();
+
+        // Fetch current
+        $stmt = $this->db->prepare('SELECT limit_check, updated_at FROM user_limits WHERE username = :u');
+        $stmt->bindParam(':u', $identifier);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt->closeCursor();
+
+        $count = (int)($row['limit_check'] ?? 0);
+        $updatedAt = strtotime((string)($row['updated_at'] ?? 'now')) ?: time();
+        // Reset if window expired
+        if (time() - $updatedAt > $windowSeconds) {
+            $count = 0;
+        }
+
+        $count++;
+        $stmt = $this->db->prepare('UPDATE user_limits SET limit_check = :c, updated_at = NOW() WHERE username = :u');
+        $stmt->bindValue(':c', $count, PDO::PARAM_INT);
+        $stmt->bindParam(':u', $identifier);
+        $stmt->execute();
+        $stmt->closeCursor();
+
+        if ($count > $maxAttempts) {
+            throw new \App\Exceptions\ApiException(429, 'TOO_MANY_TRIES', 'Too many attempts, try later');
+        }
+    }
+
+    public function resetLoginAttempts(string $identifier): void
+    {
+        $stmt = $this->db->prepare('UPDATE user_limits SET limit_check = 0, updated_at = NOW() WHERE username = :u');
+        $stmt->bindParam(':u', $identifier);
+        $stmt->execute();
+        $stmt->closeCursor();
+    }
 }

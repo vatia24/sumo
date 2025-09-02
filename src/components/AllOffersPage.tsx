@@ -54,6 +54,18 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({ onAddNew, onProductCreate
   const [editingPrice, setEditingPrice] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Bulk operations state
+  const [selectedProducts, setSelectedProducts] = useState<Set<number>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Image management state
+  const [selectedProductForImages, setSelectedProductForImages] = useState<number | null>(null);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isLoadingImages, setIsLoadingImages] = useState(false);
+  const [productImages, setProductImages] = useState<any[]>([]);
+
   // Generate 50 sample offers for demonstration - moved outside component to prevent re-generation
   const generateOffers = () => {
     const categories = ['Electronics', 'Clothing', 'Home & Garden', 'Sports', 'Books', 'Toys'];
@@ -306,6 +318,138 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({ onAddNew, onProductCreate
     }
   };
 
+  // NEW: Handle product selection for bulk operations
+  const handleProductSelection = (productId: number, checked: boolean) => {
+    const newSelection = new Set(selectedProducts);
+    if (checked) {
+      newSelection.add(productId);
+    } else {
+      newSelection.delete(productId);
+    }
+    setSelectedProducts(newSelection);
+    setShowBulkActions(newSelection.size > 0);
+  };
+
+  // NEW: Handle select all products
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = currentOffers.map(product => product.id);
+      setSelectedProducts(new Set(allIds));
+      setShowBulkActions(true);
+    } else {
+      setSelectedProducts(new Set());
+      setShowBulkActions(false);
+    }
+  };
+
+  // NEW: Handle bulk status update
+  const handleBulkStatusUpdate = async (newStatus: string) => {
+    if (selectedProducts.size === 0) return;
+
+    setIsBulkUpdating(true);
+    try {
+      const productIds = Array.from(selectedProducts);
+      await apiService.bulkProductStatus(productIds, newStatus);
+
+      // Update local state
+      setAllOffers(prev => prev.map(product => 
+        selectedProducts.has(product.id) ? { ...product, status: newStatus as 'active' | 'inactive' } : product
+      ));
+
+      // Clear selection
+      setSelectedProducts(new Set());
+      setShowBulkActions(false);
+      
+      alert(`Successfully updated ${productIds.length} products to ${newStatus}`);
+    } catch (error: any) {
+      console.error('Error updating product statuses:', error);
+      alert('Failed to update product statuses: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
+  // NEW: Handle delete product
+  const handleDeleteProduct = async (productId: number) => {
+    if (!window.confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await apiService.deleteProduct(productId);
+      
+      // Remove from local state
+      setAllOffers(prev => prev.filter(product => product.id !== productId));
+      
+      alert('Product deleted successfully');
+    } catch (error: any) {
+      console.error('Error deleting product:', error);
+      alert('Failed to delete product: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // NEW: Handle view product images
+  const handleViewImages = async (productId: number) => {
+    setSelectedProductForImages(productId);
+    setIsImageModalOpen(true);
+    setIsLoadingImages(true);
+
+    try {
+      const response = await apiService.listProductImages(productId);
+      setProductImages(response.images || []);
+    } catch (error: any) {
+      console.error('Error loading product images:', error);
+      setProductImages([]);
+    } finally {
+      setIsLoadingImages(false);
+    }
+  };
+
+  // NEW: Handle delete product image
+  const handleDeleteImage = async (imageId: number) => {
+    if (!window.confirm('Are you sure you want to delete this image?')) {
+      return;
+    }
+
+    try {
+      await apiService.deleteProductImage(imageId);
+      
+      // Remove from local state
+      setProductImages(prev => prev.filter(img => img.id !== imageId));
+      
+      alert('Image deleted successfully');
+    } catch (error: any) {
+      console.error('Error deleting image:', error);
+      alert('Failed to delete image: ' + (error.message || 'Unknown error'));
+    }
+  };
+
+  // NEW: Handle add product image
+  const handleAddImage = async (productId: number, file: File) => {
+    try {
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target?.result as string;
+        const base64Data = base64.split(',')[1]; // Remove data:image/...;base64, prefix
+        
+        await apiService.addProductImage(productId, base64Data);
+        
+        // Refresh images
+        const response = await apiService.listProductImages(productId);
+        setProductImages(response.images || []);
+        
+        alert('Image added successfully');
+      };
+      reader.readAsDataURL(file);
+    } catch (error: any) {
+      console.error('Error adding image:', error);
+      alert('Failed to add image: ' + (error.message || 'Unknown error'));
+    }
+  };
 
 
   const getPageNumbers = () => {

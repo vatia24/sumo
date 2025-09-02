@@ -87,6 +87,8 @@ class ApiController
             // Social OAuth callbacks (GET)
             'facebookAuth'              => [$this->authService, 'facebookAuth'],
             'googleAuth'                => [$this->authService, 'googleAuth'],
+            // Token refresh (POST)
+            'refresh'                   => [$this->authService, 'refresh'],
 
             // Products: read-only quick list with discounts (legacy)
             // GET /api/getProducts[?id=]
@@ -117,7 +119,7 @@ class ApiController
             'upsertCompany'             => [$this->companyService, 'upsertCompany'],
             // GET /api/getCompany?id
             'getCompany'                => [$this->companyService, 'getCompany'],
-            // GET /api/getUserCompany
+            // GET /api/getUserCompany (Bearer token)
             'getUserCompany'            => [$this->companyService, 'getUserCompany'],
             // POST /api/setCompanyStatus { company_id, status }
             'setCompanyStatus'          => [$this->companyService, 'setStatus'],
@@ -147,6 +149,8 @@ class ApiController
             'listCompanyDocuments'      => [$this->companyService, 'listDocuments'],
             // POST /api/reviewCompanyDocument { company_id, id, status }
             'reviewCompanyDocument'     => [$this->companyService, 'reviewDocument'],
+            // POST /api/deleteCompanyDocument { company_id, id }
+            'deleteCompanyDocument'     => [$this->companyService, 'deleteDocument'],
             // Delivery zones
             // POST /api/upsertDeliveryZone { id?, company_id, name, zone_type, center_lat, center_lng, radius_m, polygon }
             'upsertDeliveryZone'        => [$this->companyService, 'upsertZone'],

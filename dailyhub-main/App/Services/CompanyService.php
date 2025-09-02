@@ -12,11 +12,11 @@ class CompanyService
     private AuthService $authService;
     private BranchModel $branchModel;
 
-    public function __construct(CompanyModel $companyModel, AuthService $authService)
+    public function __construct(CompanyModel $companyModel, AuthService $authService, BranchModel $branchModel)
     {
         $this->companyModel = $companyModel;
         $this->authService = $authService;
-        $this->branchModel = new BranchModel();
+        $this->branchModel = $branchModel;
     }
 
     /**
@@ -26,14 +26,19 @@ class CompanyService
     {
         $token = $this->authService->authorizeRequest();
         $userId = $token->data->id;
-        $data['user_id'] = $userId;
-        if (!empty($data['id'])) {
-            $role = $this->companyModel->getUserRoleForCompany($userId, (int)$data['id']);
+        $payload = $data;
+        unset($payload['user_id']);
+
+        if (!empty($payload['id'])) {
+            $role = $this->companyModel->getUserRoleForCompany($userId, (int)$payload['id']);
             if (!in_array($role, ['Owner','Manager'], true)) {
                 throw new ApiException(403, 'FORBIDDEN', 'Insufficient permissions');
             }
+            // Prevent tenant switch via update
+            if (isset($payload['user_id'])) unset($payload['user_id']);
         }
-        $id = $this->companyModel->upsertCompany($data);
+        $payload['user_id'] = $userId;
+        $id = $this->companyModel->upsertCompany($payload);
         return ['id' => $id];
     }
 
@@ -50,15 +55,14 @@ class CompanyService
     /**
      * @throws ApiException
      */
-    public function getUserCompany(): array
+    public function getUserCompany(array $data): array
     {
         $token = $this->authService->authorizeRequest();
-        $userId = $token->data->id;
-        $company = $this->companyModel->getCompanyByUserId($userId);
+        $company = $this->companyModel->getCompanyByUserId($token->data->id);
         if (!$company) {
-            throw new ApiException(404, 'NOT_FOUND', 'No company found for this user');
+            throw new ApiException(404, 'NOT_FOUND', 'Company not found for this user');
         }
-        return $company;
+        return ['company' => $company];
     }
 
     /**
@@ -180,6 +184,18 @@ class CompanyService
         if (!in_array($role, ['Owner','Manager'], true)) throw new ApiException(403, 'FORBIDDEN', 'Insufficient permissions');
         $this->companyModel->reviewDocument((int)$data['id'], $data['status'], $token->data->id);
         return ['ok' => true];
+    }
+
+    /**
+     * @throws ApiException
+     */
+    public function deleteDocument(array $data): array
+    {
+        $token = $this->authService->authorizeRequest();
+        $role = $this->companyModel->getUserRoleForCompany($token->data->id, (int)$data['company_id']);
+        if (!in_array($role, ['Owner','Manager'], true)) throw new ApiException(403, 'FORBIDDEN', 'Insufficient permissions');
+        $this->companyModel->deleteDocument((int)$data['id']);
+        return ['deleted' => true];
     }
 
     /**

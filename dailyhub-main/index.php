@@ -16,48 +16,47 @@ use App\Exceptions\ApiException;
 // Load environment variables using Dotenv
 require __DIR__ . '/vendor/autoload.php';
 
-// Load .env file if it exists, otherwise use defaults
-if (file_exists(__DIR__ . '/.env')) {
-    $dotenv = Dotenv::createImmutable(__DIR__);
-    $dotenv->load();
-} else {
-    // Set default environment variables for development
-    $_ENV['APP_ENV'] = 'development';
-    $_ENV['DB_HOST'] = 'localhost';
-    $_ENV['DB_NAME'] = 'sumo';
-    $_ENV['DB_USER'] = 'root';
-    $_ENV['DB_PASS'] = '';
-    $_ENV['DB_PORT'] = '3306';
-    $_ENV['JWT_SECRET'] = 'your-secret-key-here';
-    $_ENV['JWT_EXPIRY'] = '3600';
-}
+$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv->load();
 
-// CORS headers - Fixed for development
-$allowedOrigins = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3001'
-];
-
+// CORS headers
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (in_array($origin, $allowedOrigins)) {
-    header('Access-Control-Allow-Origin: ' . $origin);
-} else {
-    header('Access-Control-Allow-Origin: *');
+$allowedOrigins = array_filter(array_map('trim', explode(',', (string)($_ENV['ALLOWED_ORIGINS'] ?? ''))));
+$isDev = (($_ENV['APP_ENV'] ?? 'production') === 'development');
+
+// Always set CORS headers for development or when origin is allowed
+if ($isDev || ($origin && in_array($origin, $allowedOrigins, true))) {
+    if ($origin) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+        header('Vary: Origin');
+        header('Access-Control-Allow-Credentials: true');
+    } else {
+        // Fallback for development when no origin header
+        header('Access-Control-Allow-Origin: *');
+    }
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Access-Control-Max-Age: 600');
 }
 
-header('Vary: Origin');
-header('Access-Control-Allow-Credentials: true');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+// Debug CORS in development
+if ($isDev) {
+    error_log("CORS Debug - Origin: " . ($origin ?: 'none') . ", Allowed: " . implode(',', $allowedOrigins) . ", IsDev: " . ($isDev ? 'true' : 'false'));
+}
+
+// Security headers (for dynamic API responses)
+header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
+header("X-Frame-Options: DENY");
+// Only set HSTS on HTTPS in production
+if (!$isDev && ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'))) {
+    header('Strict-Transport-Security: max-age=15552000; includeSubDomains');
+}
 
 // Handle CORS preflight early
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
     http_response_code(204);
-    header('Access-Control-Allow-Origin: ' . ($origin ?: '*'));
-    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept');
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
     exit;
 }
 
@@ -121,7 +120,7 @@ try {
             $authService = new \App\Services\AuthService($autModel, $authConfig);
             $userService = new \App\Services\UserService($userModel, $authService);
             $productService = new \App\Services\ProductService($productModel, $authService, new \App\Models\CompanyModel());
-            $companyService = new \App\Services\CompanyService(new \App\Models\CompanyModel(), $authService);
+            $companyService = new \App\Services\CompanyService(new \App\Models\CompanyModel(), $authService, new \App\Models\BranchModel());
             $discountService = new \App\Services\DiscountService(new \App\Models\DiscountModel(), $authService, new \App\Models\CompanyModel());
             $analyticsService = new \App\Services\AnalyticsService(new \App\Models\AnalyticsModel(), $authService);
 

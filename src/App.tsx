@@ -13,6 +13,8 @@ import PushNotificationsPage from './components/PushNotificationsPage';
 import FeaturedPage from './components/FeaturedPage';
 import BillingPage from './components/BillingPage';
 import LoginPage from './components/LoginPage';
+import ProductManagementPage from './components/ProductManagementPage';
+import CompanyPage from './components/CompanyPage';
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -53,6 +55,18 @@ function AppContent() {
             setRefreshKey(prev => prev + 1);
             setActivePage('offers');
           }}
+        />;
+      case 'product-management':
+        return <ProductManagementPage 
+          key={refreshKey}
+          onAddNew={() => setActivePage('add-offer')} 
+          onProductCreated={() => {
+            setRefreshKey(prev => prev + 1);
+          }}
+        />;
+      case 'company-management':
+        return <CompanyPage 
+          onBack={() => setActivePage('dashboard')} 
         />;
       case 'dashboard':
         return (

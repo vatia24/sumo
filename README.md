@@ -1,179 +1,214 @@
-# Sumo Front - E-commerce Platform
+# Sumo Frontend - Backend Services Testing
 
-A modern e-commerce platform built with React frontend and PHP backend API.
+This project provides a comprehensive frontend interface to test all the implemented backend services for product and company management.
 
-## 🚀 Features
+## 🚀 Quick Start
 
-- **User Authentication**: JWT-based login/registration system
-- **Product Management**: Full CRUD operations for products
-- **Company Management**: Business profile and settings
-- **Discount System**: Create and manage product discounts
-- **Analytics**: User behavior tracking and insights
-- **File Management**: Gallery and document uploads
-- **Geolocation**: Delivery zones and mapping
-- **Responsive Design**: Modern UI with Tailwind CSS
+### Backend Setup
+1. Navigate to the `dailyhub-main` directory
+2. Ensure you have PHP 8.0+ and Composer installed
+3. Install dependencies: `composer install`
+4. Configure your database in `Config/Db.php`
+5. Import the database schema from `sumo.sql`
+6. Start the PHP server: `php -S localhost:8000`
 
-## 🛠️ Tech Stack
+### Frontend Setup
+1. Install dependencies: `npm install`
+2. Start the development server: `npm start`
+3. Open http://localhost:3000 in your browser
 
-### Frontend
-- **React 18** with TypeScript
-- **Tailwind CSS** for styling
-- **React Router** for navigation
-- **Context API** for state management
+## 🧪 Testing Backend Services
 
-### Backend
-- **PHP 8.2** with OOP architecture
-- **FastRoute** for API routing
-- **JWT** for authentication
-- **MySQL** database
-- **Composer** for dependency management
+### 1. Product Management Testing
+
+Navigate to **Product Management** in the sidebar to test:
+
+#### ✅ Delete Product
+- View products in the table
+- Click the **Delete** button on any product
+- Confirm deletion in the popup
+- **Backend API**: `POST /api/deleteProduct`
+
+#### ✅ Bulk Product Status
+- Select multiple products using checkboxes
+- Choose status (Active/Inactive) from dropdown
+- Click **Update Status** button
+- **Backend API**: `POST /api/bulkProductStatus`
+
+#### ✅ Add Product Image
+- Click **Images** button on any product
+- Upload an image file
+- **Backend API**: `POST /api/addProductImage`
+
+#### ✅ List Product Images
+- Click **Images** button to view all product images
+- **Backend API**: `GET /api/listProductImages`
+
+#### ✅ Delete Product Image
+- In the image gallery, hover over images
+- Click the delete button (trash icon)
+- **Backend API**: `POST /api/deleteProductImage`
+
+### 2. Company Management Testing
+
+Navigate to **Company Management** in the sidebar to test:
+
+#### ✅ Company Profile Management
+- **Profile Tab**: Edit company details (name, address, status, etc.)
+- **Backend API**: `POST /api/upsertCompany`
+
+#### ✅ Business Hours Management
+- **Business Hours Tab**: Set opening/closing times for each day
+- **Backend API**: `POST /api/setCompanyHours`
+
+#### ✅ Social Media Management
+- **Social Media Tab**: Add/remove social media platforms and URLs
+- **Backend API**: 
+  - `POST /api/addCompanySocial`
+  - `GET /api/listCompanySocials`
+  - `POST /api/deleteCompanySocial`
+
+#### ✅ Company Gallery Management
+- **Gallery Tab**: Upload and manage company images
+- **Backend API**:
+  - `POST /api/addCompanyGallery`
+  - `GET /api/listCompanyGallery`
+  - `POST /api/deleteCompanyGallery`
+
+#### ✅ Document Management
+- **Documents Tab**: Upload and manage company documents
+- **Backend API**:
+  - `POST /api/addCompanyDocument`
+  - `GET /api/listCompanyDocuments`
+  - `POST /api/reviewCompanyDocument`
+
+#### ✅ Delivery Zone Management
+- **Delivery Zones Tab**: Create radius-based or polygon-based delivery zones
+- **Backend API**:
+  - `POST /api/upsertDeliveryZone`
+  - `GET /api/listDeliveryZones`
+  - `POST /api/deleteDeliveryZone`
+
+#### ✅ Branch Management
+- **Branches Tab**: Add/remove company branches
+- **Backend API**:
+  - `POST /api/upsertBranch`
+  - `GET /api/listBranches`
+  - `POST /api/deleteBranch`
+
+#### ✅ Contact Management
+- **Contacts Tab**: Add/remove company contact information
+- **Backend API**:
+  - `POST /api/addContact`
+  - `GET /api/listContacts`
+  - `POST /api/deleteContact`
+
+## 🔧 Backend API Endpoints
+
+### Product Management
+- `GET /api/getProducts` - Get all products with discounts
+- `GET /api/getProduct` - Get single product
+- `GET /api/listProducts` - List products with filters
+- `POST /api/upsertProduct` - Create/update product
+- `POST /api/deleteProduct` - Delete product
+- `POST /api/bulkProductStatus` - Bulk update product statuses
+- `POST /api/addProductImage` - Add product image
+- `GET /api/listProductImages` - List product images
+- `POST /api/deleteProductImage` - Delete product image
+
+### Company Management
+- `POST /api/upsertCompany` - Create/update company
+- `GET /api/getCompany` - Get company details
+- `POST /api/setCompanyStatus` - Set company status
+- `POST /api/setCompanyHours` - Set business hours
+- `GET /api/getCompanyHours` - Get business hours
+- `POST /api/addCompanySocial` - Add social media
+- `GET /api/listCompanySocials` - List social media
+- `POST /api/deleteCompanySocial` - Delete social media
+- `POST /api/addCompanyGallery` - Add gallery image
+- `GET /api/listCompanyGallery` - List gallery images
+- `POST /api/deleteCompanyGallery` - Delete gallery image
+- `POST /api/addCompanyDocument` - Add document
+- `GET /api/listCompanyDocuments` - List documents
+- `POST /api/reviewCompanyDocument` - Review document
+- `POST /api/upsertDeliveryZone` - Create/update delivery zone
+- `GET /api/listDeliveryZones` - List delivery zones
+- `POST /api/deleteDeliveryZone` - Delete delivery zone
+- `POST /api/upsertBranch` - Create/update branch
+- `GET /api/listBranches` - List branches
+- `POST /api/deleteBranch` - Delete branch
+- `POST /api/addContact` - Add contact
+- `GET /api/listContacts` - List contacts
+- `POST /api/deleteContact` - Delete contact
+
+## 🗄️ Database Schema
+
+The backend uses the following main tables:
+- `product` - Product information
+- `product_images` - Product image storage
+- `companies` - Company profiles
+- `company_hours` - Business hours
+- `company_socials` - Social media links
+- `company_gallery` - Company images
+- `company_documents` - Company documents
+- `delivery_zones` - Delivery zone definitions
+- `company_branches` - Company branch locations
+- `contact` - Company contact information
+
+## 🔐 Authentication
+
+All API endpoints require JWT authentication:
+- Login via `/api/authorize`
+- Include `Authorization: Bearer <token>` header
+- Tokens are automatically managed by the frontend
+
+## 🐛 Troubleshooting
+
+### Backend Issues
+1. Check PHP error logs
+2. Verify database connection in `Config/Db.php`
+3. Ensure all required tables exist
+4. Check file permissions for upload directories
+
+### Frontend Issues
+1. Check browser console for API errors
+2. Verify backend server is running on port 8000
+3. Check CORS configuration in backend
+4. Ensure authentication tokens are valid
 
 ## 📁 Project Structure
 
 ```
-sumo-front/
-├── src/                    # React frontend source
-│   ├── components/         # React components
-│   ├── contexts/          # React contexts
-│   └── services/          # API services
-├── dailyhub-main/         # PHP backend
-│   ├── App/              # Application logic
-│   │   ├── Controllers/  # API controllers
-│   │   ├── Models/       # Database models
-│   │   ├── Services/     # Business logic
-│   │   └── Helpers/      # Utility classes
-│   ├── Config/           # Configuration files
-│   └── vendor/           # Composer dependencies
-├── public/               # Static assets
-└── package.json          # Node.js dependencies
+dailyhub-main/          # Backend PHP application
+├── App/
+│   ├── Controllers/    # API controllers
+│   ├── Models/         # Database models
+│   ├── Services/       # Business logic
+│   └── Helpers/        # Utility functions
+├── Config/             # Configuration files
+├── uploads/            # File upload directories
+└── sumo.sql           # Database schema
+
+src/                    # Frontend React application
+├── components/         # React components
+├── services/           # API service layer
+└── contexts/           # React contexts
 ```
 
-## 🚀 Quick Start
+## 🎯 Testing Checklist
 
-### Prerequisites
-- Node.js 16+ 
-- PHP 8.2+
-- MySQL 8.0+
-- Composer
+- [ ] Product deletion works
+- [ ] Bulk product status updates work
+- [ ] Product image upload works
+- [ ] Product image listing works
+- [ ] Product image deletion works
+- [ ] Company profile updates work
+- [ ] Business hours management works
+- [ ] Social media management works
+- [ ] Company gallery management works
+- [ ] Document management works
+- [ ] Delivery zone management works
+- [ ] Branch management works
+- [ ] Contact management works
 
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd sumo-front
-   ```
-
-2. **Install frontend dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Install backend dependencies**
-   ```bash
-   cd dailyhub-main
-   composer install
-   ```
-
-4. **Set up the database**
-   - Import `dailyhub-main/sumo.sql` into your MySQL database
-   - Update database credentials in `dailyhub-main/Config/Db.php`
-
-5. **Start the development servers**
-
-   **Backend (PHP API):**
-   ```bash
-   cd dailyhub-main
-   php -S localhost:8000
-   ```
-
-   **Frontend (React):**
-   ```bash
-   npm start
-   ```
-
-6. **Access the application**
-   - Frontend: http://localhost:3000
-   - API: http://localhost:8000/api
-
-## 🔧 Configuration
-
-### Environment Variables
-
-Create a `.env` file in the `dailyhub-main` directory:
-
-```env
-APP_ENV=development
-DB_HOST=localhost
-DB_NAME=sumo
-DB_USER=root
-DB_PASS=your_password
-DB_PORT=3306
-JWT_SECRET=your-secret-key-here
-JWT_EXPIRY=3600
-```
-
-### API Configuration
-
-The frontend is configured to connect to `http://localhost:8000/api` by default. You can change this in `src/services/api.ts`:
-
-```typescript
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
-```
-
-## 📚 API Documentation
-
-### Authentication Endpoints
-- `POST /api/authorize` - User login
-- `POST /api/registerUser` - User registration
-- `POST /api/logout` - User logout
-
-### Product Endpoints
-- `GET /api/getProducts` - Get all products
-- `GET /api/getProduct?id={id}` - Get single product
-- `POST /api/upsertProduct` - Create/update product
-- `POST /api/deleteProduct` - Delete product
-
-### Company Endpoints
-- `GET /api/getUserCompany` - Get user's company
-- `POST /api/upsertCompany` - Create/update company
-
-### Discount Endpoints
-- `GET /api/listDiscounts` - Get all discounts
-- `POST /api/upsertDiscount` - Create/update discount
-
-## 🧪 Testing
-
-### Test API Endpoints
-You can use the provided test files:
-- `test_api.html` - Basic API testing
-- `test_api_fix.html` - API connectivity test
-- `test_api_php_server.html` - PHP server test
-
-### Manual Testing
-1. Open `http://localhost:8000/test.php` to verify PHP server
-2. Open `http://localhost:8000/api/getProducts` to test API (requires auth)
-3. Use the React app at `http://localhost:3000` for full functionality
-
-## 🔒 Security
-
-- JWT token-based authentication
-- CORS properly configured for development
-- Input validation and sanitization
-- SQL injection prevention with prepared statements
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📞 Support
-
-For support and questions, please open an issue in the GitHub repository.
+All backend services are fully implemented and ready for testing through the frontend interface!

@@ -188,6 +188,26 @@ class PasswordResetConfirmPaths
 }
 
 /**
+ * @OA\Post(
+ *     path="/api/refresh",
+ *     summary="Exchange refresh token for new access token",
+ *     tags={"auth"},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"refresh_token"},
+ *             @OA\Property(property="refresh_token", type="string")
+ *         )
+ *     ),
+ *     @OA\Response(response=200, description="OK"),
+ *     @OA\Response(response=401, description="Invalid token")
+ * )
+ */
+class RefreshPaths
+{
+}
+
+/**
  * @OA\Get(
  *     path="/api/getProducts",
  *     summary="Get products (requires Bearer token)",
@@ -379,6 +399,376 @@ class CompanyUpsertPaths{}
 class CompanyGetPaths{}
 
 /**
+ * @OA\Post(
+ *     path="/api/setCompanyStatus",
+ *     summary="Set company status",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"company_id","status"},
+ *             @OA\Property(property="company_id", type="integer"),
+ *             @OA\Property(property="status", type="string", enum={"pending","verified","suspended"})
+ *         )
+ *     ),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyStatusPaths{}
+
+/**
+ * @OA\Post(
+ *     path="/api/setCompanyHours",
+ *     summary="Replace company hours",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"company_id","hours"},
+ *             @OA\Property(property="company_id", type="integer"),
+ *             @OA\Property(property="hours", type="array",
+ *                 @OA\Items(type="object",
+ *                     @OA\Property(property="day_of_week", type="integer", minimum=0, maximum=6),
+ *                     @OA\Property(property="open_time", type="string"),
+ *                     @OA\Property(property="close_time", type="string"),
+ *                     @OA\Property(property="is_closed", type="boolean")
+ *                 )
+ *             )
+ *         )
+ *     ),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyHoursSetPaths{}
+
+/**
+ * @OA\Get(
+ *     path="/api/getCompanyHours",
+ *     summary="Get company hours",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\Parameter(name="company_id", in="query", required=true, @OA\Schema(type="integer")),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyHoursGetPaths{}
+
+/**
+ * @OA\Post(
+ *     path="/api/addCompanySocial",
+ *     summary="Add company social link",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"company_id","platform","url"},
+ *             @OA\Property(property="company_id", type="integer"),
+ *             @OA\Property(property="platform", type="string"),
+ *             @OA\Property(property="url", type="string")
+ *         )
+ *     ),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanySocialAddPaths{}
+
+/**
+ * @OA\Get(
+ *     path="/api/listCompanySocials",
+ *     summary="List socials",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\Parameter(name="company_id", in="query", required=true, @OA\Schema(type="integer")),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanySocialListPaths{}
+
+/**
+ * @OA\Post(
+ *     path="/api/deleteCompanySocial",
+ *     summary="Delete social",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"company_id","id"},
+ *             @OA\Property(property="company_id", type="integer"),
+ *             @OA\Property(property="id", type="integer")
+ *         )
+ *     ),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanySocialDeletePaths{}
+
+/**
+ * @OA\Post(
+ *     path="/api/addCompanyGallery",
+ *     summary="Add gallery image (base64)",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"company_id","file_base64"},
+ *             @OA\Property(property="company_id", type="integer"),
+ *             @OA\Property(property="file_base64", type="string")
+ *         )
+ *     ),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyGalleryAddPaths{}
+
+/**
+ * @OA\Get(
+ *     path="/api/listCompanyGallery",
+ *     summary="List gallery",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\Parameter(name="company_id", in="query", required=true, @OA\Schema(type="integer")),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyGalleryListPaths{}
+
+/**
+ * @OA\Post(
+ *     path="/api/deleteCompanyGallery",
+ *     summary="Delete gallery image",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"company_id","id"},
+ *             @OA\Property(property="company_id", type="integer"),
+ *             @OA\Property(property="id", type="integer")
+ *         )
+ *     ),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyGalleryDeletePaths{}
+
+/**
+ * @OA\Post(
+ *     path="/api/addCompanyDocument",
+ *     summary="Add document (base64)",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"company_id","doc_type","file_base64"},
+ *             @OA\Property(property="company_id", type="integer"),
+ *             @OA\Property(property="doc_type", type="string"),
+ *             @OA\Property(property="file_base64", type="string")
+ *         )
+ *     ),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyDocumentAddPaths{}
+
+/**
+ * @OA\Get(
+ *     path="/api/listCompanyDocuments",
+ *     summary="List documents",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\Parameter(name="company_id", in="query", required=true, @OA\Schema(type="integer")),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyDocumentListPaths{}
+
+/**
+ * @OA\Post(
+ *     path="/api/reviewCompanyDocument",
+ *     summary="Review document",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"company_id","id","status"},
+ *             @OA\Property(property="company_id", type="integer"),
+ *             @OA\Property(property="id", type="integer"),
+ *             @OA\Property(property="status", type="string", enum={"pending","approved","rejected"})
+ *         )
+ *     ),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyDocumentReviewPaths{}
+
+/**
+ * @OA\Post(
+ *     path="/api/upsertDeliveryZone",
+ *     summary="Upsert delivery zone",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"company_id","name","zone_type"},
+ *             @OA\Property(property="id", type="integer"),
+ *             @OA\Property(property="company_id", type="integer"),
+ *             @OA\Property(property="name", type="string"),
+ *             @OA\Property(property="zone_type", type="string", enum={"radius","polygon"}),
+ *             @OA\Property(property="center_lat", type="number"),
+ *             @OA\Property(property="center_lng", type="number"),
+ *             @OA\Property(property="radius_m", type="integer"),
+ *             @OA\Property(property="polygon", type="string")
+ *         )
+ *     ),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyZoneUpsertPaths{}
+
+/**
+ * @OA\Get(
+ *     path="/api/listDeliveryZones",
+ *     summary="List delivery zones",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\Parameter(name="company_id", in="query", required=true, @OA\Schema(type="integer")),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyZoneListPaths{}
+
+/**
+ * @OA\Post(
+ *     path="/api/deleteDeliveryZone",
+ *     summary="Delete delivery zone",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"company_id","id"},
+ *             @OA\Property(property="company_id", type="integer"),
+ *             @OA\Property(property="id", type="integer")
+ *         )
+ *     ),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyZoneDeletePaths{}
+
+/**
+ * @OA\Post(
+ *     path="/api/upsertBranch",
+ *     summary="Upsert branch",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"company_id","branch_name"},
+ *             @OA\Property(property="id", type="integer"),
+ *             @OA\Property(property="company_id", type="integer"),
+ *             @OA\Property(property="branch_name", type="string"),
+ *             @OA\Property(property="branch_address", type="string"),
+ *             @OA\Property(property="branch_image", type="string")
+ *         )
+ *     ),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyBranchUpsertPaths{}
+
+/**
+ * @OA\Get(
+ *     path="/api/listBranches",
+ *     summary="List branches",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\Parameter(name="company_id", in="query", required=true, @OA\Schema(type="integer")),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyBranchListPaths{}
+
+/**
+ * @OA\Post(
+ *     path="/api/deleteBranch",
+ *     summary="Delete branch",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"company_id","id"},
+ *             @OA\Property(property="company_id", type="integer"),
+ *             @OA\Property(property="id", type="integer")
+ *         )
+ *     ),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyBranchDeletePaths{}
+
+/**
+ * @OA\Post(
+ *     path="/api/addContact",
+ *     summary="Add contact",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"company_id"},
+ *             @OA\Property(property="company_id", type="integer"),
+ *             @OA\Property(property="phone", type="string"),
+ *             @OA\Property(property="email", type="string"),
+ *             @OA\Property(property="address", type="string")
+ *         )
+ *     ),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyContactAddPaths{}
+
+/**
+ * @OA\Get(
+ *     path="/api/listContacts",
+ *     summary="List contacts",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\Parameter(name="company_id", in="query", required=true, @OA\Schema(type="integer")),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyContactListPaths{}
+
+/**
+ * @OA\Post(
+ *     path="/api/deleteContact",
+ *     summary="Delete contact",
+ *     tags={"company"},
+ *     security={{"bearerAuth": {}}},
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             required={"company_id","id"},
+ *             @OA\Property(property="company_id", type="integer"),
+ *             @OA\Property(property="id", type="integer")
+ *         )
+ *     ),
+ *     @OA\Response(response=200, description="OK")
+ * )
+ */
+class CompanyContactDeletePaths{}
+/**
  * @OA\Get(
  *     path="/api/listDiscounts",
  *     summary="List discounts",
@@ -410,14 +800,13 @@ class DiscountsListPaths{}
  *             @OA\Property(property="id", type="integer"),
  *             @OA\Property(property="company_id", type="integer"),
  *             @OA\Property(property="product_id", type="integer"),
- *             @OA\Property(property="discount_price", type="number", format="float"),
- *             @OA\Property(property="discount_percent", type="number", format="float"),
+ *             @OA\Property(property="discount_percent", type="number", format="float", description="0-100 percent"),
  *             @OA\Property(property="start_date", type="string", format="date"),
  *             @OA\Property(property="end_date", type="string", format="date"),
  *             @OA\Property(property="status", type="string", enum={"draft","active","inactive","archived","scheduled"})
  *         )
  *     ),
- *     @OA\Response(response=400, description="Provide either discount_price or discount_percent"),
+ *     @OA\Response(response=400, description="Invalid input"),
  *     @OA\Response(response=200, description="OK")
  * )
  */

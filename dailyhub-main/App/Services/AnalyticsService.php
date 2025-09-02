@@ -22,6 +22,10 @@ class AnalyticsService
     public function track(array $data): array
     {
         $token = $this->authService->authorizeRequest();
+        $allowedActions = ['view','clicked','redirect','map_open','share','favorite'];
+        if (empty($data['action']) || !in_array($data['action'], $allowedActions, true)) {
+            throw new ApiException(400, 'BAD_REQUEST', 'Invalid action');
+        }
         $payload = [
             'discount_id' => (int)$data['discount_id'],
             'action' => $data['action'],
