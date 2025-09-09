@@ -12,7 +12,11 @@ import {
   User
 } from 'lucide-react';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  onNavigate?: (page: string) => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
   const { user, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -22,6 +26,16 @@ const Header: React.FC = () => {
     } catch (error) {
       console.error('Logout failed:', error);
     }
+  };
+
+  const handleProfileClick = () => {
+    setShowUserMenu(false);
+    onNavigate?.('profile');
+  };
+
+  const handleSettingsClick = () => {
+    setShowUserMenu(false);
+    onNavigate?.('profile');
   };
 
   const getUserInitials = (name?: string) => {
@@ -38,7 +52,7 @@ const Header: React.FC = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
-              placeholder="Search something..."
+              placeholder="ძებნა..."
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
             />
           </div>
@@ -75,7 +89,7 @@ const Header: React.FC = () => {
                 {getUserInitials(user?.name)}
               </div>
               <div className="text-sm text-left">
-                <div className="font-medium text-gray-900">{user?.name || 'User'}</div>
+                <div className="font-medium text-gray-900">{user?.name || 'მომხმარებელი'}</div>
                 <div className="text-gray-600 text-xs capitalize">{user?.role || 'user'}</div>
               </div>
               <ChevronDown className="text-gray-400" size={16} />
@@ -85,18 +99,18 @@ const Header: React.FC = () => {
             {showUserMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                 <button
-                  onClick={() => setShowUserMenu(false)}
+                  onClick={handleProfileClick}
                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
                 >
                   <User size={16} />
-                  <span>Profile</span>
+                  <span>პროფილი</span>
                 </button>
                 <button
-                  onClick={() => setShowUserMenu(false)}
+                  onClick={handleSettingsClick}
                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
                 >
                   <Settings size={16} />
-                  <span>Settings</span>
+                  <span>პარამეტრები</span>
                 </button>
                 <hr className="my-1" />
                 <button
@@ -113,11 +127,11 @@ const Header: React.FC = () => {
       </div>
       
       {/* Welcome message */}
-      <div className="mt-4">
+      {/* <div className="mt-4">
         <h1 className="text-xl font-semibold text-gray-900">
-          Welcome back, {user?.name || 'User'} 👋
+          Welcome back, {user?.name || 'მომხმარებელი'} 👋
         </h1>
-      </div>
+      </div> */}
     </div>
   );
 };

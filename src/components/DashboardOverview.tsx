@@ -18,7 +18,7 @@ const DashboardOverview: React.FC = () => {
     };
   }> = [
     {
-      title: 'Total Views',
+      title: 'ჯამური ნახვები',
       value: '185.5k',
       badge: 'Total',
       badgeColor: 'green',
@@ -44,7 +44,7 @@ const DashboardOverview: React.FC = () => {
       }
     },
     {
-      title: 'Click-Through Rate (CTR)',
+      title: 'კლიკები (CTR)',
       value: '75.6K',
       icon: Target,
       iconBg: 'bg-purple-100',
@@ -56,7 +56,7 @@ const DashboardOverview: React.FC = () => {
       }
     },
     {
-      title: 'Total Shares',
+      title: 'ჯამური გაზიარებები',
       value: '75.6K',
       icon: Share2,
       iconBg: 'bg-orange-100',
@@ -73,15 +73,15 @@ const DashboardOverview: React.FC = () => {
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+        <h2 className="text-2xl font-bold text-gray-900">დაფის მიმოხილვა</h2>
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2 border border-gray-300 rounded-lg px-3 py-2">
             <CalendarIcon size={16} className="text-gray-500" />
-            <span className="text-sm text-gray-600">01 May to 31 May</span>
+            <span className="text-sm text-gray-600">01 მაისი – 31 მაისი</span>
           </div>
           <button className="bg-accent-purple hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200">
             <Plus size={16} />
-            <span>Add New +</span>
+            <span>დამატება</span>
           </button>
         </div>
       </div>

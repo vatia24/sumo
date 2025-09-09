@@ -17,9 +17,13 @@ import ProductManagementPage from './components/ProductManagementPage';
 import CompanyPage from './components/CompanyPage';
 
 function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [activePage, setActivePage] = useState('dashboard');
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Debug authentication state
+  console.log('App render - isAuthenticated:', isAuthenticated, 'isLoading:', isLoading, 'user:', user);
+  console.log('App render - user type:', typeof user, 'user truthy:', !!user);
 
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -35,7 +39,7 @@ function AppContent() {
 
   // Show login page if not authenticated
   if (!isAuthenticated) {
-    return <LoginPage onLoginSuccess={() => setActivePage('dashboard')} />;
+    return <LoginPage />;
   }
 
   const renderPageContent = () => {
@@ -101,7 +105,7 @@ function AppContent() {
     <div className="flex h-screen bg-gray-50">
       <Sidebar activePage={activePage} onPageChange={setActivePage} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
+        <Header onNavigate={setActivePage} />
         <main className="flex-1 overflow-y-auto p-6">
           {renderPageContent()}
         </main>

@@ -236,6 +236,16 @@ class ApiService {
 
       if (!response.ok) {
         console.error('API Error Response:', result);
+        
+        // Handle 401 Unauthorized - token expired or invalid
+        if (response.status === 401) {
+          // Clear tokens and redirect to login
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('refresh_token');
+          // Dispatch a custom event to notify the app about logout
+          window.dispatchEvent(new CustomEvent('auth:logout'));
+        }
+        
         throw new Error(result.message || 'API request failed');
       }
 
@@ -264,7 +274,7 @@ class ApiService {
   }
 
   // Helper method to decode JWT token
-  private decodeJWTToken(token: string): User {
+  public decodeJWTToken(token: string): User {
     try {
       const base64Url = token.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -273,14 +283,23 @@ class ApiService {
       }).join(''));
       
       const payload = JSON.parse(jsonPayload);
-      return {
-        id: payload.id,
-        identifier: payload.identifier,
-        role: payload.role as 'customer' | 'owner' | 'manager' | 'legal_person',
-        name: payload.name,
-        email: payload.email,
-        mobile: payload.mobile
+      console.log('JWT payload:', payload);
+      
+      // The user data is nested under 'data' field in the JWT payload
+      const userData = payload.data;
+      console.log('JWT userData:', userData);
+      
+      const user = {
+        id: userData.id,
+        identifier: userData.identifier,
+        role: userData.role as 'customer' | 'owner' | 'manager' | 'legal_person',
+        name: userData.name,
+        email: userData.email,
+        mobile: userData.mobile
       };
+      
+      console.log('Decoded user:', user);
+      return user;
     } catch (error) {
       console.error('Error decoding JWT token:', error);
       throw new Error('Invalid token format');

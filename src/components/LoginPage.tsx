@@ -57,19 +57,34 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Login form submitted');
     setError('');
     setSuccess('');
     setIsSubmitting(true);
 
     try {
+      console.log('Calling login function with:', loginData.identifier);
       await login(loginData.identifier, loginData.password);
-      setSuccess('Login successful!');
-      onLoginSuccess?.();
+      console.log('Login function completed successfully');
+      setSuccess('Login successful! Redirecting...');
+      // Don't call onLoginSuccess here - let the authentication state change naturally
+      // The App component will automatically redirect when isAuthenticated becomes true
     } catch (error: any) {
+      console.error('Login function failed:', error);
       setError(error.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Debug function to check authentication state
+  const debugAuth = () => {
+    const token = localStorage.getItem('auth_token');
+    console.log('=== DEBUG AUTH ===');
+    console.log('Token in localStorage:', !!token);
+    console.log('Token preview:', token ? token.substring(0, 50) + '...' : 'No token');
+    console.log('isLoading from context:', isLoading);
+    console.log('==================');
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -257,6 +272,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <ArrowRight size={20} />
               )}
               <span>{isSubmitting || isLoading ? 'Signing in...' : 'Sign In'}</span>
+            </button>
+            
+            {/* Debug button */}
+            <button
+              type="button"
+              onClick={debugAuth}
+              className="w-full bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 text-sm"
+            >
+              Debug Auth State
             </button>
           </form>
         )}

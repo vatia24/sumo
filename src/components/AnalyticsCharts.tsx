@@ -8,45 +8,45 @@ const AnalyticsCharts: React.FC = () => {
 
   // Devices data
   const devicesData = [
-    { name: 'iOS', value: 159.5, color: '#ef4444' },
-    { name: 'Android', value: 148.56, color: '#10b981' },
-    { name: 'Desktop', value: 45.2, color: '#f97316' }
+    { name: 'iOS', value: 45, color: '#ef4444' },
+    { name: 'Android', value: 38, color: '#10b981' },
+    { name: 'Desktop', value: 17, color: '#f97316' }
   ];
 
   // Age data
   const ageData = [
-    { age: '-18', value: 200 },
-    { age: '18-24', value: 400 },
-    { age: '25-34', value: 1200 },
-    { age: '35-44', value: 800 },
-    { age: '45-64', value: 600 },
-    { age: '65+', value: 300 }
+    { age: '-18', value: 12 },
+    { age: '18-24', value: 25 },
+    { age: '25-34', value: 45 },
+    { age: '35-44', value: 32 },
+    { age: '45-64', value: 18 },
+    { age: '65+', value: 8 }
   ];
 
   // Time series data for trends
   const timeSeriesData = [
-    { date: 'Mon', views: 2400, clicks: 180, conversions: 24 },
-    { date: 'Tue', views: 2210, clicks: 190, conversions: 28 },
-    { date: 'Wed', views: 2900, clicks: 220, conversions: 32 },
-    { date: 'Thu', views: 2000, clicks: 160, conversions: 20 },
-    { date: 'Fri', views: 2181, clicks: 200, conversions: 26 },
-    { date: 'Sat', views: 2500, clicks: 210, conversions: 30 },
-    { date: 'Sun', views: 2100, clicks: 180, conversions: 25 }
+    { date: 'Mon', views: 85, clicks: 12, conversions: 3 },
+    { date: 'Tue', views: 92, clicks: 15, conversions: 4 },
+    { date: 'Wed', views: 78, clicks: 11, conversions: 2 },
+    { date: 'Thu', views: 105, clicks: 18, conversions: 5 },
+    { date: 'Fri', views: 88, clicks: 14, conversions: 3 },
+    { date: 'Sat', views: 95, clicks: 16, conversions: 4 },
+    { date: 'Sun', views: 82, clicks: 13, conversions: 3 }
   ];
 
   // Location data
   const locationData = [
-    { name: 'Segment 1', value: 8.7, color: '#3b82f6' },
-    { name: 'Segment 2', value: 9.9, color: '#10b981' },
-    { name: 'Segment 3', value: 23.8, color: '#6b7280' },
-    { name: 'Segment 4', value: 32.0, color: '#f97316' },
-    { name: 'Segment 5', value: 25.6, color: '#8b5cf6' }
+    { name: 'Tbilisi', value: 35, color: '#3b82f6' },
+    { name: 'Batumi', value: 28, color: '#10b981' },
+    { name: 'Kutaisi', value: 22, color: '#6b7280' },
+    { name: 'Rustavi', value: 15, color: '#f97316' },
+    { name: 'Other', value: 8, color: '#8b5cf6' }
   ];
 
   const deviceStats = [
-    { name: 'iOS', value: '159.5k', change: '-3.91%', trend: 'down' },
-    { name: 'Android', value: '148.56k', change: '+3.91%', trend: 'up' },
-    { name: 'Desktop', value: '45.2k', change: '+1.05%', trend: 'up' }
+    { name: 'iOS', value: '45', change: '-3.91%', trend: 'down' },
+    { name: 'Android', value: '38', change: '+3.91%', trend: 'up' },
+    { name: 'Desktop', value: '17', change: '+1.05%', trend: 'up' }
   ];
 
   const tabs = [
@@ -72,27 +72,25 @@ const AnalyticsCharts: React.FC = () => {
               
               <div className="flex items-center justify-center mb-6">
                 <div className="relative">
-                  <ResponsiveContainer width={200} height={200}>
-                    <PieChart>
-                      <Pie
-                        data={devicesData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {devicesData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <PieChart width={200} height={200}>
+                    <Pie
+                      data={devicesData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {devicesData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-gray-900">Total</div>
-                      <div className="text-lg font-semibold text-gray-700">353.26</div>
+                      <div className="text-lg font-semibold text-gray-700">100</div>
                     </div>
                   </div>
                 </div>
@@ -197,23 +195,21 @@ const AnalyticsCharts: React.FC = () => {
               </div>
               
               <div className="flex items-center justify-center mb-6">
-                <ResponsiveContainer width={200} height={200}>
-                  <PieChart>
-                    <Pie
-                      data={locationData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={80}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {locationData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
+                <PieChart width={200} height={200}>
+                  <Pie
+                    data={locationData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {locationData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
               </div>
 
               <div className="space-y-2">

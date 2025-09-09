@@ -3,18 +3,50 @@
 @tailwind utilities;
 
 @layer base {
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  
   body {
     font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  #root {
+    height: 100%;
+  }
+  
+  /* LGV Anastasia font for sidebar */
+  @font-face {
+    font-family: 'LGV Anastasia';
+    src: url('./fonts/LGVAnastasia-Regular-99964407299.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
   }
 }
 
 @layer components {
+  .sidebar {
+    font-family: 'LGV Anastasia', 'Inter', system-ui, sans-serif;
+  }
+  
   .sidebar-item {
-    @apply flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-blue-600 hover:text-white rounded-lg transition-colors duration-200;
+    @apply flex items-center gap-4 px-4 py-4 text-gray-300 hover:bg-blue-600 hover:text-white rounded-lg transition-colors duration-200 text-3xl;
+    align-items: center;
+    line-height: 1;
   }
   
   .sidebar-item.active {
     @apply bg-blue-600 text-white;
+  }
+  
+  .sidebar-item span {
+    display: flex;
+    align-items: center;
+    line-height: 1;
   }
   
   .metric-card {

@@ -61,15 +61,15 @@ const MetricCard: React.FC<MetricCardProps> = ({
       {/* Breakdown */}
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Daily</span>
+          <span className="text-gray-500">დღე</span>
           <span className="font-medium text-gray-900">{breakdown.daily}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Weekly</span>
+          <span className="text-gray-500">კვირა</span>
           <span className="font-medium text-gray-900">{breakdown.weekly}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Monthly</span>
+          <span className="text-gray-500">თვე</span>
           <span className="font-medium text-gray-900">{breakdown.monthly}</span>
         </div>
       </div>

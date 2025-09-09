@@ -12,6 +12,12 @@ import {
 } from 'lucide-react';
 import { apiService, Product, ProductImage } from '../services/api';
 
+// Helper function to get the base URL for serving static files
+const getBaseUrl = () => {
+  const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+  return apiUrl.replace('/api', '');
+};
+
 // Helper function to safely format price values
 const formatPrice = (price: any): string => {
   if (price === null || price === undefined) return '0.00';
@@ -188,9 +194,8 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({ onAddNew,
       reader.readAsDataURL(file);
       reader.onload = () => {
         const base64 = reader.result as string;
-        // Remove data:image/jpeg;base64, prefix
-        const base64Data = base64.split(',')[1];
-        resolve(base64Data);
+        // Keep the full data URL format (data:image/jpeg;base64,...)
+        resolve(base64);
       };
       reader.onerror = error => reject(error);
     });
@@ -230,8 +235,8 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({ onAddNew,
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Product Management</h1>
-              <p className="text-gray-600 mt-1">Manage your products, images, and bulk operations</p>
+                      <h1 className="text-2xl font-bold text-gray-900">პროდუქტის მართვა</h1>
+        <p className="text-gray-600 mt-1">Manage your products, images, and bulk operations</p>
             </div>
             <button
               onClick={onAddNew}
@@ -309,19 +314,19 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({ onAddNew,
                     Product
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
+                    ფასი
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    სტატუსი
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Company
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
+                    შექმნის თარიღი
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                    ქმედებები
                   </th>
                 </tr>
               </thead>
@@ -381,7 +386,7 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({ onAddNew,
                           ? 'bg-red-100 text-red-800'
                           : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {product.status}
+                        {product.status === 'active' ? 'აქტიური' : product.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -500,7 +505,7 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({ onAddNew,
                 {selectedProductImages.map((image) => (
                   <div key={image.id} className="relative group">
                     <img
-                      src={`data:image/jpeg;base64,${image.path}`}
+                      src={`${getBaseUrl()}/uploads/products/${image.path.split(/[/\\]/).pop()}`}
                       alt={`Product ${image.id}`}
                       className="w-full h-32 object-cover rounded-lg"
                     />
@@ -514,7 +519,7 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({ onAddNew,
                           <Trash2 className="h-4 w-4" />
                         </button>
                         <a
-                          href={`data:image/jpeg;base64,${image.path}`}
+                          href={`${getBaseUrl()}/uploads/products/${image.path.split(/[/\\]/).pop()}`}
                           download={`product-image-${image.id}.jpg`}
                           className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700"
                           title="Download Image"
