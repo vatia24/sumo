@@ -14,30 +14,19 @@ interface Product {
   address?: string;
 }
 
-const OffersTable: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface OffersTableProps {
+  products?: Product[];
+  loading?: boolean;
+  error?: string | null;
+  onRefresh?: () => void;
+}
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-             const response = await apiService.getProducts();
-       console.log('Products API response:', response);
-       console.log('First product structure:', response?.[0]);
-       setProducts(response || []);
-    } catch (err: any) {
-      console.error('Error fetching products:', err);
-      setError(err.message || 'Failed to fetch products');
-    } finally {
-      setLoading(false);
-    }
-  };
+const OffersTable: React.FC<OffersTableProps> = ({ 
+  products = [], 
+  loading = false, 
+  error = null, 
+  onRefresh 
+}) => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100">
@@ -46,7 +35,7 @@ const OffersTable: React.FC = () => {
         <h2 className="text-xl font-semibold text-gray-900">All Products</h2>
         <div className="flex items-center space-x-3">
           <button 
-            onClick={fetchProducts}
+            onClick={onRefresh}
             disabled={loading}
             className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200 disabled:opacity-50"
           >
@@ -73,7 +62,7 @@ const OffersTable: React.FC = () => {
         <div className="px-6 py-4 text-red-600 bg-red-50 border border-red-200 rounded-lg">
           <p>Error: {error}</p>
           <button 
-            onClick={fetchProducts}
+            onClick={onRefresh}
             className="mt-2 text-sm text-red-700 underline hover:no-underline"
           >
             Try again

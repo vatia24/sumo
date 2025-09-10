@@ -160,7 +160,10 @@ export interface ProductImage {
 
 // API Service Class
 class ApiService {
-  private token: string | null = null;
+  private token: string | null = null
+  private companyDataCache: { data: any; timestamp: number } | null = null
+  private companyHoursCache: { [companyId: number]: { data: any; timestamp: number } } = {}
+  private readonly CACHE_DURATION = 30000 // 30 seconds;
   private refreshToken: string | null = null;
 
   constructor() {
@@ -417,6 +420,8 @@ class ApiService {
   // Company Methods
   async upsertCompany(companyData: Partial<Company>): Promise<{ id: number }> {
     const response = await this.request<{ id: number }>('POST', 'upsertCompany', companyData);
+    // Clear company cache when company is updated
+    this.companyDataCache = null;
     return response.data!;
   }
 
@@ -426,24 +431,60 @@ class ApiService {
   }
 
   async getUserCompany(): Promise<Company> {
+    // Check cache first
+    if (this.companyDataCache && 
+        (Date.now() - this.companyDataCache.timestamp) < this.CACHE_DURATION) {
+      console.log('CompanyPage: Using cached company data');
+      return this.companyDataCache.data;
+    }
+
+    console.log('CompanyPage: Fetching fresh company data from API');
     const response = await this.request<{ company: Company }>('GET', 'getUserCompany', {});
-    return response.data!.company;
+    const company = response.data!.company;
+    
+    // Cache the result
+    this.companyDataCache = {
+      data: company,
+      timestamp: Date.now()
+    };
+    
+    return company;
   }
 
   async setCompanyStatus(company_id: number, status: string): Promise<{ ok: boolean }> {
     const response = await this.request<{ ok: boolean }>('POST', 'setCompanyStatus', { company_id, status });
+    // Clear company cache when status is updated
+    this.companyDataCache = null;
     return response.data!;
   }
 
   // Company Hours Methods
   async setCompanyHours(company_id: number, hours: CompanyHours[]): Promise<{ ok: boolean }> {
     const response = await this.request<{ ok: boolean }>('POST', 'setCompanyHours', { company_id, hours });
+    // Clear company hours cache when hours are updated
+    delete this.companyHoursCache[company_id];
     return response.data!;
   }
 
   async getCompanyHours(company_id: number): Promise<{ hours: CompanyHours[] }> {
+    // Check cache first
+    if (this.companyHoursCache[company_id] && 
+        (Date.now() - this.companyHoursCache[company_id].timestamp) < this.CACHE_DURATION) {
+      console.log('CompanyPage: Using cached company hours data');
+      return this.companyHoursCache[company_id].data;
+    }
+
+    console.log('CompanyPage: Fetching fresh company hours data from API');
     const response = await this.request<{ hours: CompanyHours[] }>('GET', 'getCompanyHours', { company_id: company_id.toString() });
-    return response.data!;
+    const hoursData = response.data!;
+    
+    // Cache the result
+    this.companyHoursCache[company_id] = {
+      data: hoursData,
+      timestamp: Date.now()
+    };
+    
+    return hoursData;
   }
 
   // Company Social Methods

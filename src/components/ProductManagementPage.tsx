@@ -28,12 +28,24 @@ const formatPrice = (price: any): string => {
 interface ProductManagementPageProps {
   onAddNew?: () => void;
   onProductCreated?: () => void;
+  products?: Product[];
+  loading?: boolean;
+  error?: string | null;
+  onRefresh?: () => void;
 }
 
-const ProductManagementPage: React.FC<ProductManagementPageProps> = ({ onAddNew, onProductCreated }) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const ProductManagementPage: React.FC<ProductManagementPageProps> = ({ 
+  onAddNew, 
+  onProductCreated, 
+  products: propProducts = [], 
+  loading: propLoading = false, 
+  error: propError = null, 
+  onRefresh 
+}) => {
+  // Use local state as fallback if props are not provided
+  const [products, setProducts] = useState<Product[]>(propProducts);
+  const [loading, setLoading] = useState(propLoading);
+  const [error, setError] = useState<string | null>(propError);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(15);
   const [selectedProducts, setSelectedProducts] = useState<Set<number>>(new Set());
@@ -48,10 +60,19 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({ onAddNew,
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  // Fetch products from API
+  // Update local state when props change
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    setProducts(propProducts);
+    setLoading(propLoading);
+    setError(propError);
+  }, [propProducts, propLoading, propError]);
+
+  // Only fetch products if no props are provided (fallback for standalone usage)
+  useEffect(() => {
+    if (!onRefresh && propProducts.length === 0 && !propLoading && !propError) {
+      fetchProducts();
+    }
+  }, [onRefresh, propProducts.length, propLoading, propError]);
 
   const fetchProducts = async () => {
     try {
@@ -82,6 +103,11 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({ onAddNew,
         newSet.delete(productId);
         return newSet;
       });
+      
+      // Trigger parent refresh if available
+      if (onRefresh) {
+        onRefresh();
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to delete product');
       console.error('Error deleting product:', err);
@@ -128,6 +154,11 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({ onAddNew,
       // Clear selection
       setSelectedProducts(new Set());
       setError(null);
+      
+      // Trigger parent refresh if available
+      if (onRefresh) {
+        onRefresh();
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to update product statuses');
       console.error('Error updating product statuses:', err);

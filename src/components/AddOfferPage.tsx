@@ -9,6 +9,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { useCompany } from '../contexts/CompanyContext';
 
 interface AddOfferPageProps {
   onBack?: () => void;
@@ -16,6 +17,8 @@ interface AddOfferPageProps {
 }
 
 const AddOfferPage: React.FC<AddOfferPageProps> = ({ onBack, onProductCreated }) => {
+  const { company, loading: companyLoading, error: companyError } = useCompany();
+  
   const [formData, setFormData] = useState({
     name: '',
     price: '125',
@@ -27,30 +30,20 @@ const AddOfferPage: React.FC<AddOfferPageProps> = ({ onBack, onProductCreated })
     endDate: '',
     originalPrice: '',
     discountPercentage: '0',
-    company_id: 1 // Default company ID - you might want to get this from context
+    company_id: 1 // Default company ID - will be updated from context
   });
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [userCompany, setUserCompany] = useState<any>(null);
 
-  // Fetch user's company on component mount
+  // Update form data when company is loaded
   useEffect(() => {
-    const fetchUserCompany = async () => {
-      try {
-        const company = await apiService.getUserCompany();
-        setUserCompany(company);
-        setFormData(prev => ({ ...prev, company_id: company.id }));
-      } catch (err: any) {
-        console.error('Error fetching user company:', err);
-        setError('Failed to fetch company information. Please try again.');
-      }
-    };
-
-    fetchUserCompany();
-  }, []);
+    if (company) {
+      setFormData(prev => ({ ...prev, company_id: company.id }));
+    }
+  }, [company]);
 
   const categories = ['Electronics', 'Clothing', 'Home & Garden', 'Sports', 'Books', 'Toys'];
   const subcategories = ['Smartphones', 'Laptops', 'Accessories', 'Men', 'Women', 'Kids'];
@@ -94,7 +87,7 @@ const AddOfferPage: React.FC<AddOfferPageProps> = ({ onBack, onProductCreated })
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!userCompany) {
+    if (!company) {
       setError('Company information not available. Please try again.');
       return;
     }
@@ -105,7 +98,7 @@ const AddOfferPage: React.FC<AddOfferPageProps> = ({ onBack, onProductCreated })
     try {
       // Prepare product data
       const productData = {
-        company_id: userCompany.id,
+        company_id: company.id,
         name: formData.name,
         price: parseFloat(formData.price),
         description: formData.description || undefined,
@@ -120,7 +113,7 @@ const AddOfferPage: React.FC<AddOfferPageProps> = ({ onBack, onProductCreated })
       // If there's a discount, create it
       if (parseFloat(formData.discountPercentage) > 0) {
         const discountData = {
-          company_id: userCompany.id,
+          company_id: company.id,
           product_id: createdProduct.id,
           discount_percent: parseFloat(formData.discountPercentage),
           status: 'active' as const,

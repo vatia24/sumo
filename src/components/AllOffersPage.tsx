@@ -30,9 +30,20 @@ interface Product {
 interface AllOffersPageProps {
   onAddNew?: () => void;
   onProductCreated?: () => void;
+  products?: Product[];
+  loading?: boolean;
+  error?: string | null;
+  onRefresh?: () => void;
 }
 
-const AllOffersPage: React.FC<AllOffersPageProps> = ({ onAddNew, onProductCreated }) => {
+const AllOffersPage: React.FC<AllOffersPageProps> = ({ 
+  onAddNew, 
+  onProductCreated, 
+  products = [], 
+  loading = false, 
+  error = null, 
+  onRefresh 
+}) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<FilterData>({
@@ -101,51 +112,8 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({ onAddNew, onProductCreate
     return offers;
   };
 
-  // Fetch products from API instead of generating fake data
-  const [allOffers, setAllOffers] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch products from API
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await apiService.getProducts();
-      console.log('Products API response in AllOffersPage:', response);
-      console.log('First product sample:', response?.[0]);
-      console.log('Response type:', typeof response);
-      console.log('Response length:', response?.length);
-      if (response && response.length > 0) {
-        console.log('Sample product fields:', Object.keys(response[0]));
-        console.log('Sample product discount fields:', {
-          discount_id: response[0].discount_id,
-          discount_percent: response[0].discount_percent,
-          effective_price: response[0].effective_price,
-          price: response[0].price
-        });
-        // Log all products with their prices and effective prices
-        response.forEach((product, index) => {
-          console.log(`Product ${index + 1}:`, {
-            name: product.name,
-            price: product.price,
-            discount_percent: product.discount_percent,
-            effective_price: product.effective_price
-          });
-        });
-      }
-      setAllOffers(response || []);
-    } catch (err: any) {
-      console.error('Error fetching products:', err);
-      setError(err.message || 'Failed to fetch products');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Use products from props instead of fetching
+  const allOffers = products;
 
   // Filter offers based on active filters
   const filterOffers = (offers: Product[], filters: FilterData) => {
@@ -282,10 +250,10 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({ onAddNew, onProductCreate
       
       const updatedProduct = await apiService.upsertProduct(updateData);
 
-      // Update the local state
-      setAllOffers(prev => prev.map(p => 
-        p.id === product.id ? { ...p, price: newPrice } : p
-      ));
+      // Refresh data from parent component
+      if (onRefresh) {
+        onRefresh();
+      }
 
       setEditingProductId(null);
       setEditingPrice('');
@@ -351,10 +319,10 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({ onAddNew, onProductCreate
       const productIds = Array.from(selectedProducts);
       await apiService.bulkProductStatus(productIds, newStatus);
 
-      // Update local state
-      setAllOffers(prev => prev.map(product => 
-        selectedProducts.has(product.id) ? { ...product, status: newStatus as 'active' | 'inactive' } : product
-      ));
+      // Refresh data from parent component
+      if (onRefresh) {
+        onRefresh();
+      }
 
       // Clear selection
       setSelectedProducts(new Set());
@@ -379,8 +347,10 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({ onAddNew, onProductCreate
     try {
       await apiService.deleteProduct(productId);
       
-      // Remove from local state
-      setAllOffers(prev => prev.filter(product => product.id !== productId));
+      // Refresh data from parent component
+      if (onRefresh) {
+        onRefresh();
+      }
       
       alert('Product deleted successfully');
     } catch (error: any) {
@@ -503,7 +473,7 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({ onAddNew, onProductCreate
         <h1 className="text-3xl font-bold text-gray-900">All Offers</h1>
                  <div className="flex items-center space-x-4">
            <button 
-             onClick={fetchProducts}
+             onClick={onRefresh}
              disabled={loading}
              className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors duration-200 disabled:opacity-50"
            >
@@ -587,7 +557,7 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({ onAddNew, onProductCreate
           <div className="text-red-600 bg-red-50 border border-red-200 rounded-lg p-4">
             <p>Error: {error}</p>
             <button 
-              onClick={fetchProducts}
+              onClick={onRefresh}
               className="mt-2 text-sm text-red-700 underline hover:no-underline"
             >
               Try again

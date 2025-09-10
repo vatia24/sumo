@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -16,6 +16,7 @@ import {
   Edit3
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { useCompany } from '../contexts/CompanyContext';
 
 interface Company {
   id: number;
@@ -100,10 +101,12 @@ interface CompanyPageProps {
 }
 
 const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
+  const { company, loading: companyLoading, error: companyError, refreshCompany } = useCompany();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const hasAttemptedFetch = useRef(false);
   
   // Company profile state
   const [companyForm, setCompanyForm] = useState<{
@@ -180,10 +183,8 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
         ...companyForm
       });
       
-      // Refresh company data
-      const company = await apiService.getUserCompany();
-      setCompanies([company]);
-      setSelectedCompany(company);
+      // Refresh company data from context
+      await refreshCompany();
       setIsEditing(false);
     } catch (err: any) {
       setError(err.message || 'Failed to update company');
@@ -409,43 +410,55 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
     }
   };
 
+  // Handle initial data fetch when component mounts
   useEffect(() => {
-    const fetchCompanyData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Fetch user's company (always needed)
-        const company = await apiService.getUserCompany();
-        setCompanies([company]);
-        setSelectedCompany(company);
-        setCompanyForm({
-          full_name: company.full_name,
-          address: company.address || '',
-          city: company.city || '',
-          postal_code: company.postal_code || '',
-          country: company.country || '',
-          status: company.status
-        });
+    console.log('CompanyPage: useEffect running - hasAttemptedFetch:', hasAttemptedFetch.current);
+    if (!hasAttemptedFetch.current) {
+      console.log('CompanyPage: Initial fetch of company data...');
+      hasAttemptedFetch.current = true;
+      refreshCompany();
+    }
+  }, []); // Empty dependency array - only run once on mount
 
-        // Initialize business hours with default values if none exist
-        try {
-          const hoursResponse = await apiService.getCompanyHours(company.id);
-          if (hoursResponse.hours && hoursResponse.hours.length > 0) {
-            setCompanyHours(hoursResponse.hours);
-          } else {
-            // Set default business hours (Monday-Sunday, 9 AM - 5 PM)
-            const defaultHours = Array.from({ length: 7 }, (_, i) => ({
-              day_of_week: i + 1,
-              open_time: '09:00',
-              close_time: '17:00',
-              is_closed: false
-            }));
-            setCompanyHours(defaultHours);
-          }
-        } catch (err) {
-          console.warn('Could not load business hours, using defaults');
-          // Set default business hours
+  // Handle company data updates
+  useEffect(() => {
+    if (company) {
+      console.log('CompanyPage: Using company data from context');
+      setCompanies([company]);
+      setSelectedCompany(company);
+      setCompanyForm({
+        full_name: company.full_name,
+        address: company.address || '',
+        city: company.city || '',
+        postal_code: company.postal_code || '',
+        country: company.country || '',
+        status: company.status
+      });
+      setLoading(false);
+    } else if (companyError) {
+      setError(companyError);
+      setLoading(false);
+    } else if (companyLoading) {
+      setLoading(true);
+    }
+  }, [company, companyLoading, companyError]);
+
+  // Fetch company hours when company is available (only once per company)
+  const hasLoadedHours = useRef<Set<number>>(new Set());
+  
+  useEffect(() => {
+    if (!selectedCompany || hasLoadedHours.current.has(selectedCompany.id)) return;
+    
+    const fetchCompanyHours = async () => {
+      try {
+        console.log('CompanyPage: Fetching company hours...');
+        hasLoadedHours.current.add(selectedCompany.id);
+        const hoursResponse = await apiService.getCompanyHours(selectedCompany.id);
+        
+        if (hoursResponse.hours && hoursResponse.hours.length > 0) {
+          setCompanyHours(hoursResponse.hours);
+        } else {
+          // Set default business hours (Monday-Sunday, 9 AM - 5 PM)
           const defaultHours = Array.from({ length: 7 }, (_, i) => ({
             day_of_week: i + 1,
             open_time: '09:00',
@@ -454,17 +467,21 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
           }));
           setCompanyHours(defaultHours);
         }
-
-      } catch (err: any) {
-        console.error('Error fetching company data:', err);
-        setError(err.message || 'Failed to fetch company data');
-      } finally {
-        setLoading(false);
+      } catch (err) {
+        console.warn('Could not load business hours, using defaults');
+        // Set default business hours
+        const defaultHours = Array.from({ length: 7 }, (_, i) => ({
+          day_of_week: i + 1,
+          open_time: '09:00',
+          close_time: '17:00',
+          is_closed: false
+        }));
+        setCompanyHours(defaultHours);
       }
     };
 
-    fetchCompanyData();
-  }, []);
+    fetchCompanyHours();
+  }, [selectedCompany?.id]); // Only depend on the company ID, not the entire object
 
   // Function to handle tab change and lazy loading
   const handleTabChange = async (tabId: string) => {
@@ -486,8 +503,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
 
       switch (tabId) {
         case 'hours':
-          const hoursResponse = await apiService.getCompanyHours(selectedCompany.id);
-          setCompanyHours(hoursResponse.hours);
+          // Hours are already loaded in useEffect, no need to fetch again
           break;
         
         case 'social':
