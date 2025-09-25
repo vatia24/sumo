@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, ReactNode } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -13,7 +13,8 @@ import {
   Phone,
   Mail,
   Map,
-  Edit3
+  Edit3,
+  ChevronDown
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useCompany } from '../contexts/CompanyContext';
@@ -147,7 +148,6 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
   const [companyContacts, setCompanyContacts] = useState<CompanyContact[]>([]);
   
   // UI state
-  const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   
@@ -167,9 +167,13 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
   const [branchForm, setBranchForm] = useState({ branch_name: '', branch_address: '', branch_image: null as File | null });
   const [contactForm, setContactForm] = useState({ phone: '', email: '', address: '' });
 
-  // Lazy loading state for each tab
+  // Lazy loading + open state for each panel
   const [loadedTabs, setLoadedTabs] = useState<Set<string>>(new Set(['profile']));
   const [loadingTabs, setLoadingTabs] = useState<Set<string>>(new Set());
+  const [openPanels, setOpenPanels] = useState<Set<string>>(new Set(['profile']));
+
+  // Refs to scroll into view when opening from sidebar
+  const panelRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -483,13 +487,32 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
     fetchCompanyHours();
   }, [selectedCompany?.id]); // Only depend on the company ID, not the entire object
 
-  // Function to handle tab change and lazy loading
-  const handleTabChange = async (tabId: string) => {
-    setActiveTab(tabId);
-    
-    // If tab hasn't been loaded yet, load it
-    if (!loadedTabs.has(tabId) && selectedCompany) {
-      await loadTabData(tabId);
+  // Open a panel and lazy-load its data
+  const openPanel = async (panelId: string) => {
+    setOpenPanels(prev => new Set(prev).add(panelId));
+    if (!loadedTabs.has(panelId) && selectedCompany) {
+      await loadTabData(panelId);
+    }
+    // Scroll into view
+    const el = panelRefs.current[panelId];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Toggle a panel (collapsible)
+  const togglePanel = async (panelId: string) => {
+    setOpenPanels(prev => {
+      const next = new Set(prev);
+      if (next.has(panelId)) {
+        next.delete(panelId);
+      } else {
+        next.add(panelId);
+      }
+      return next;
+    });
+    if (!loadedTabs.has(panelId) && selectedCompany) {
+      await loadTabData(panelId);
     }
   };
 
@@ -600,43 +623,72 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
             {error}
           </div>
         )}
+        {/* Layout: Sidebar + Content */}
+        <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
+          {/* Sidebar */}
+          <aside className="md:sticky md:top-6 h-max">
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <div className="mb-3">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Company</h3>
+                <div className="mt-2 space-y-1">
+                  <button onClick={() => openPanel('profile')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm text-gray-800">Profile</span>
+                  </button>
+                  <button onClick={() => openPanel('hours')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm text-gray-800">Business Hours</span>
+                  </button>
+                  <button onClick={() => openPanel('contacts')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
+                    <Users className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm text-gray-800">Contacts</span>
+                  </button>
+                </div>
+              </div>
+              <div className="mb-3">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Presence</h3>
+                <div className="mt-2 space-y-1">
+                  <button onClick={() => openPanel('social')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
+                    <Share2 className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm text-gray-800">Social Media</span>
+                  </button>
+                  <button onClick={() => openPanel('gallery')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm text-gray-800">Gallery</span>
+                  </button>
+                  <button onClick={() => openPanel('documents')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm text-gray-800">Documents</span>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Operations</h3>
+                <div className="mt-2 space-y-1">
+                  <button onClick={() => openPanel('zones')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
+                    <Map className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm text-gray-800">Delivery Zones</span>
+                  </button>
+                  <button onClick={() => openPanel('branches')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm text-gray-800">Branches</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </aside>
 
-        {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-sm mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6">
-              {[
-                { id: 'profile', label: 'Profile', icon: Building2 },
-                { id: 'hours', label: 'Business Hours', icon: Clock },
-                { id: 'social', label: 'Social Media', icon: Share2 },
-                { id: 'gallery', label: 'Gallery', icon: ImageIcon },
-                { id: 'documents', label: 'Documents', icon: FileText },
-                { id: 'zones', label: 'Delivery Zones', icon: Map },
-                { id: 'branches', label: 'Branches', icon: MapPin },
-                { id: 'contacts', label: 'Contacts', icon: Users }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <tab.icon className="h-4 w-4" />
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-        </div>
-
-        {/* Tab Content */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          {/* Profile Tab */}
-          {activeTab === 'profile' && (
-            <div>
+          {/* Content */}
+          <div className="space-y-4">
+            {/* CollapsibleSection component */}
+            <CollapsibleSection
+              id="profile"
+              title="Company Profile"
+              icon={<Building2 className="h-4 w-4" />}
+              open={openPanels.has('profile')}
+              onToggle={() => togglePanel('profile')}
+              containerRef={(el: HTMLDivElement | null) => (panelRefs.current['profile'] = el)}
+            >
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-medium text-gray-900">Company Profile</h2>
                 <button
@@ -750,12 +802,16 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                   </div>
                 </div>
               )}
-            </div>
-          )}
+            </CollapsibleSection>
 
-          {/* Business Hours Tab */}
-          {activeTab === 'hours' && (
-            <div>
+            <CollapsibleSection
+              id="hours"
+              title="Business Hours"
+              icon={<Clock className="h-4 w-4" />}
+              open={openPanels.has('hours')}
+              onToggle={() => togglePanel('hours')}
+              containerRef={(el: HTMLDivElement | null) => (panelRefs.current['hours'] = el)}
+            >
               {loadingTabs.has('hours') ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
@@ -860,12 +916,132 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                   )}
                 </div>
               )}
-            </div>
-          )}
+            </CollapsibleSection>
 
-          {/* Social Media Tab */}
-          {activeTab === 'social' && (
-            <div>
+            <CollapsibleSection
+              id="contacts"
+              title="Company Contacts"
+              icon={<Users className="h-4 w-4" />}
+              open={openPanels.has('contacts')}
+              onToggle={() => togglePanel('contacts')}
+              containerRef={(el: HTMLDivElement | null) => (panelRefs.current['contacts'] = el)}
+            >
+              {loadingTabs.has('contacts') ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
+                  <span className="ml-3 text-gray-600">Loading contacts...</span>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-medium text-gray-900">Company Contacts</h2>
+                    <button
+                      onClick={() => setShowAddContact(!showAddContact)}
+                      className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Contact
+                    </button>
+                  </div>
+                  
+                  {showAddContact && (
+                    <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                      <h3 className="text-md font-medium text-gray-900 mb-3">Add New Contact</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                          <input
+                            type="tel"
+                            value={contactForm.phone}
+                            onChange={(e) => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
+                            placeholder="e.g., +1-555-123-4567"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                          <input
+                            type="email"
+                            value={contactForm.email}
+                            onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
+                            placeholder="e.g., contact@company.com"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                          <input
+                            type="text"
+                            value={contactForm.address}
+                            onChange={(e) => setContactForm(prev => ({ ...prev, address: e.target.value }))}
+                            placeholder="e.g., 123 Business St, City, State, ZIP"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <button
+                          onClick={handleAddContact}
+                          disabled={!contactForm.phone && !contactForm.email && !contactForm.address}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          Add Contact
+                        </button>
+                        <button
+                          onClick={() => setShowAddContact(false)}
+                          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {companyContacts.map((contact) => (
+                      <div key={contact.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                        <div>
+                          {contact.phone && (
+                            <p className="text-sm text-gray-900 flex items-center gap-2">
+                              <Phone className="h-4 w-4" />
+                              {contact.phone}
+                            </p>
+                          )}
+                          {contact.email && (
+                            <p className="text-sm text-gray-900 flex items-center gap-2">
+                              <Mail className="h-4 w-4" />
+                              {contact.email}
+                            </p>
+                          )}
+                          {contact.address && (
+                            <p className="text-sm text-gray-900 flex items-center gap-2">
+                              <MapPin className="h-4 w-4" />
+                              {contact.address}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleDeleteContact(contact.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              id="social"
+              title="Social Media"
+              icon={<Share2 className="h-4 w-4" />}
+              open={openPanels.has('social')}
+              onToggle={() => togglePanel('social')}
+              containerRef={(el: HTMLDivElement | null) => (panelRefs.current['social'] = el)}
+            >
               {loadingTabs.has('social') ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
@@ -949,12 +1125,16 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                   </div>
                 </div>
               )}
-            </div>
-          )}
+            </CollapsibleSection>
 
-          {/* Gallery Tab */}
-          {activeTab === 'gallery' && (
-            <div>
+            <CollapsibleSection
+              id="gallery"
+              title="Company Gallery"
+              icon={<ImageIcon className="h-4 w-4" />}
+              open={openPanels.has('gallery')}
+              onToggle={() => togglePanel('gallery')}
+              containerRef={(el: HTMLDivElement | null) => (panelRefs.current['gallery'] = el)}
+            >
               {loadingTabs.has('gallery') ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
@@ -1024,12 +1204,16 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                   </div>
                 </div>
               )}
-            </div>
-          )}
+            </CollapsibleSection>
 
-          {/* Documents Tab */}
-          {activeTab === 'documents' && (
-            <div>
+            <CollapsibleSection
+              id="documents"
+              title="Company Documents"
+              icon={<FileText className="h-4 w-4" />}
+              open={openPanels.has('documents')}
+              onToggle={() => togglePanel('documents')}
+              containerRef={(el: HTMLDivElement | null) => (panelRefs.current['documents'] = el)}
+            >
               {loadingTabs.has('documents') ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
@@ -1111,12 +1295,16 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                   </div>
                 </div>
               )}
-            </div>
-          )}
+            </CollapsibleSection>
 
-          {/* Delivery Zones Tab */}
-          {activeTab === 'zones' && (
-            <div>
+            <CollapsibleSection
+              id="zones"
+              title="Delivery Zones"
+              icon={<Map className="h-4 w-4" />}
+              open={openPanels.has('zones')}
+              onToggle={() => togglePanel('zones')}
+              containerRef={(el: HTMLDivElement | null) => (panelRefs.current['zones'] = el)}
+            >
               {loadingTabs.has('zones') ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
@@ -1236,12 +1424,16 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                   </div>
                 </div>
               )}
-            </div>
-          )}
+            </CollapsibleSection>
 
-          {/* Branches Tab */}
-          {activeTab === 'branches' && (
-            <div>
+            <CollapsibleSection
+              id="branches"
+              title="Company Branches"
+              icon={<MapPin className="h-4 w-4" />}
+              open={openPanels.has('branches')}
+              onToggle={() => togglePanel('branches')}
+              containerRef={(el: HTMLDivElement | null) => (panelRefs.current['branches'] = el)}
+            >
               {loadingTabs.has('branches') ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
@@ -1332,120 +1524,8 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                   </div>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* Contacts Tab */}
-          {activeTab === 'contacts' && (
-            <div>
-              {loadingTabs.has('contacts') ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
-                  <span className="ml-3 text-gray-600">Loading contacts...</span>
-                </div>
-              ) : (
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium text-gray-900">Company Contacts</h2>
-                    <button
-                      onClick={() => setShowAddContact(!showAddContact)}
-                      className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add Contact
-                    </button>
-                  </div>
-                  
-                  {showAddContact && (
-                    <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                      <h3 className="text-md font-medium text-gray-900 mb-3">Add New Contact</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                          <input
-                            type="tel"
-                            value={contactForm.phone}
-                            onChange={(e) => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
-                            placeholder="e.g., +1-555-123-4567"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                          <input
-                            type="email"
-                            value={contactForm.email}
-                            onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
-                            placeholder="e.g., contact@company.com"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                          <input
-                            type="text"
-                            value={contactForm.address}
-                            onChange={(e) => setContactForm(prev => ({ ...prev, address: e.target.value }))}
-                            placeholder="e.g., 123 Business St, City, State, ZIP"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex gap-2 mt-4">
-                        <button
-                          onClick={handleAddContact}
-                          disabled={!contactForm.phone && !contactForm.email && !contactForm.address}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                        >
-                          Add Contact
-                        </button>
-                        <button
-                          onClick={() => setShowAddContact(false)}
-                          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {companyContacts.map((contact) => (
-                      <div key={contact.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                        <div>
-                          {contact.phone && (
-                            <p className="text-sm text-gray-900 flex items-center gap-2">
-                              <Phone className="h-4 w-4" />
-                              {contact.phone}
-                            </p>
-                          )}
-                          {contact.email && (
-                            <p className="text-sm text-gray-900 flex items-center gap-2">
-                              <Mail className="h-4 w-4" />
-                              {contact.email}
-                            </p>
-                          )}
-                          {contact.address && (
-                            <p className="text-sm text-gray-900 flex items-center gap-2">
-                              <MapPin className="h-4 w-4" />
-                              {contact.address}
-                            </p>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => handleDeleteContact(contact.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+            </CollapsibleSection>
+          </div>
         </div>
       </div>
     </div>
@@ -1453,3 +1533,38 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
 };
 
 export default CompanyPage;
+
+// Collapsible Section component (local)
+function CollapsibleSection({
+  id,
+  title,
+  icon,
+  open,
+  onToggle,
+  children,
+  containerRef,
+}: {
+  id: string;
+  title: string;
+  icon?: ReactNode;
+  open: boolean;
+  onToggle: () => void | Promise<void>;
+  children: ReactNode;
+  containerRef?: (el: HTMLDivElement | null) => void;
+}) {
+  return (
+    <div ref={containerRef} id={id} className="bg-white rounded-lg shadow-sm">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3"
+      >
+        <div className="flex items-center gap-2">
+          {icon}
+          <span className="text-sm font-medium text-gray-900">{title}</span>
+        </div>
+        <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="px-4 pb-4">{children}</div>}
+    </div>
+  );
+}

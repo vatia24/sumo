@@ -93,13 +93,13 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center pt-20">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-6xl mx-4">
+      <div className="card w-full max-w-6xl mx-4 p-0">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">Filter Offers</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            className="icon-button"
           >
             <X size={20} className="text-gray-500" />
           </button>
@@ -118,7 +118,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                   value={filters.title}
                   onChange={(e) => handleFilterChange('title', e.target.value)}
                   placeholder="Search title..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                  className="input pr-8"
                 />
                 <ChevronDown size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               </div>
@@ -130,7 +130,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
               <div className="relative">
                 <button
                   onClick={() => handleDropdownToggle('category')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-left flex items-center justify-between"
+                  className="input text-left flex items-center justify-between"
                 >
                   <span className={filters.category ? 'text-gray-900' : 'text-gray-500'}>
                     {filters.category || 'Category'}
@@ -162,7 +162,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
               <div className="relative">
                 <button
                   onClick={() => handleDropdownToggle('subcategory')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-left flex items-center justify-between"
+                  className="input text-left flex items-center justify-between"
                 >
                   <span className={filters.subcategory ? 'text-gray-900' : 'text-gray-500'}>
                     {filters.subcategory || 'Subcategory'}
@@ -195,7 +195,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                 type="date"
                 value={filters.startDate}
                 onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input"
               />
             </div>
 
@@ -206,7 +206,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                 type="date"
                 value={filters.endDate}
                 onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input"
               />
             </div>
           </div>
@@ -222,7 +222,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                   value={filters.originalPrice}
                   onChange={(e) => handleFilterChange('originalPrice', e.target.value)}
                   placeholder="Min price"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                  className="input pr-8"
                 />
                 <ChevronDown size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               </div>
@@ -237,7 +237,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                   value={filters.discountPercent}
                   onChange={(e) => handleFilterChange('discountPercent', e.target.value)}
                   placeholder="Min discount"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                  className="input pr-8"
                 />
                 <ChevronDown size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               </div>
@@ -252,7 +252,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                   value={filters.finalPrice}
                   onChange={(e) => handleFilterChange('finalPrice', e.target.value)}
                   placeholder="Max price"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                  className="input pr-8"
                 />
                 <ChevronDown size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               </div>
@@ -264,7 +264,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
               <div className="relative">
                 <button
                   onClick={() => handleDropdownToggle('status')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-left flex items-center justify-between"
+                  className="input text-left flex items-center justify-between"
                 >
                   <span className={filters.status ? 'text-gray-900' : 'text-gray-500'}>
                     {filters.status || 'status'}
@@ -301,7 +301,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                     return (
                       <span
                         key={key}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+                        className="badge bg-blue-100 text-blue-800"
                       >
                         {key}: {value}
                         <button
@@ -324,7 +324,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         <div className="flex items-center justify-between p-6 border-t border-gray-200">
           <button
             onClick={handleReset}
-            className="flex items-center space-x-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+            className="btn btn-danger"
           >
             <RotateCcw size={16} />
             <span>Reset</span>
@@ -333,13 +333,13 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
           <div className="flex items-center space-x-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+              className="btn btn-ghost"
             >
               Cancel
             </button>
             <button
               onClick={handleApplyFilters}
-              className="flex items-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+              className="btn btn-primary"
             >
               <Filter size={16} />
               <span>Filters</span>

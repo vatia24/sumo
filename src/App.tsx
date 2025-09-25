@@ -22,6 +22,8 @@ function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [activePage, setActivePage] = useState('dashboard');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [pendingEditProductId, setPendingEditProductId] = useState<number | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Shared products state for dashboard
   const [products, setProducts] = useState<Product[]>([]);
@@ -106,6 +108,7 @@ function AppContent() {
           loading={productsLoading}
           error={productsError}
           onRefresh={fetchProducts}
+          autoEditProductId={pendingEditProductId}
         />;
       case 'company-management':
         return <CompanyPage 
@@ -116,12 +119,17 @@ function AppContent() {
           <div className="space-y-6">
             <DashboardOverview />
             <OffersTable 
-              products={products}
+              products={products.filter(p => {
+                const hasPercent = (p as any).discount_percent != null && Number((p as any).discount_percent) > 0;
+                const isActive = (p as any).discount_status === 'active';
+                return hasPercent && isActive;
+              })}
               loading={productsLoading}
               error={productsError}
               onRefresh={fetchProducts}
+              onEdit={(id) => { setPendingEditProductId(id); setActivePage('product-management'); }}
             />
-            <AnalyticsCharts />
+            {/* Analytics sections removed from main dashboard */}
           </div>
         );
       case 'analytics':
@@ -152,11 +160,18 @@ function AppContent() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar activePage={activePage} onPageChange={setActivePage} />
+      <Sidebar 
+        activePage={activePage} 
+        onPageChange={(page) => { setActivePage(page); setIsSidebarOpen(false); }}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header onNavigate={setActivePage} />
-        <main className="flex-1 overflow-y-auto p-6">
-          {renderPageContent()}
+        <Header activePage={activePage} onNavigate={setActivePage} onOpenSidebar={() => setIsSidebarOpen(true)} />
+        <main className="flex-1 scroll-area">
+          <div className="page-container py-6">
+            {renderPageContent()}
+          </div>
         </main>
       </div>
     </div>

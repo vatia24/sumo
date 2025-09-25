@@ -2218,6 +2218,33 @@
                 ]
             }
         }
+        ,
+        "/api/companyAnalyticsTotals": {
+            "get": {
+                "tags": [
+                    "analytics"
+                ],
+                "summary": "Company-wide analytics totals",
+                "operationId": "b3b2a8a2f4a84f5d8ac2a9a3f3e20f12",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": { "type": "integer" }
+                    },
+                    { "name": "from", "in": "query", "required": false, "schema": { "type": "string", "format": "date-time" } },
+                    { "name": "to", "in": "query", "required": false, "schema": { "type": "string", "format": "date-time" } },
+                    { "name": "device_type", "in": "query", "required": false, "schema": { "type": "string", "enum": ["mobile","desktop","tablet"] } },
+                    { "name": "city", "in": "query", "required": false, "schema": { "type": "string" } },
+                    { "name": "region", "in": "query", "required": false, "schema": { "type": "string" } },
+                    { "name": "age_group", "in": "query", "required": false, "schema": { "type": "string" } },
+                    { "name": "gender", "in": "query", "required": false, "schema": { "type": "string" } }
+                ],
+                "responses": { "200": { "description": "OK" } },
+                "security": [ { "bearerAuth": [] } ]
+            }
+        }
     },
     "components": {
         "securitySchemes": {

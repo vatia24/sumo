@@ -459,15 +459,7 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumbs */}
-      <div className="text-sm text-gray-500">
-        <span className="hover:text-gray-700 cursor-pointer">Osen</span>
-        <span className="mx-2">›</span>
-        <span className="hover:text-gray-700 cursor-pointer">Account</span>
-        <span className="mx-2">›</span>
-        <span className="text-gray-700">Profile Settings</span>
-      </div>
-
+      
       {/* Page Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>

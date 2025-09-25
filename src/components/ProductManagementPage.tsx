@@ -11,11 +11,20 @@ import {
   Upload
 } from 'lucide-react';
 import { apiService, Product, ProductImage } from '../services/api';
+import { Edit } from 'lucide-react';
 
 // Helper function to get the base URL for serving static files
 const getBaseUrl = () => {
   const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
   return apiUrl.replace('/api', '');
+};
+
+// Normalize a product image path to a browser-accessible URL (prefer images table)
+const getProductListThumbUrl = (path?: string) => {
+  if (!path) return '';
+  if (/^https?:\/\//i.test(path)) return path;
+  const filename = path.split(/[\\\/]/).pop() || path;
+  return `${getBaseUrl()}/uploads/products/${filename}`;
 };
 
 // Helper function to safely format price values
@@ -32,6 +41,7 @@ interface ProductManagementPageProps {
   loading?: boolean;
   error?: string | null;
   onRefresh?: () => void;
+  autoEditProductId?: number | null;
 }
 
 const ProductManagementPage: React.FC<ProductManagementPageProps> = ({ 
@@ -40,7 +50,8 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
   products: propProducts = [], 
   loading: propLoading = false, 
   error: propError = null, 
-  onRefresh 
+  onRefresh,
+  autoEditProductId = null,
 }) => {
   // Use local state as fallback if props are not provided
   const [products, setProducts] = useState<Product[]>(propProducts);
@@ -60,12 +71,27 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
+  // Edit modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editForm, setEditForm] = useState<{ name: string; price: string; description: string; stock?: string } | null>(null);
+  const [discountForm, setDiscountForm] = useState<{ id?: number; percent: string; start_date: string; end_date: string; status: 'active' | 'inactive' } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
   // Update local state when props change
   useEffect(() => {
     setProducts(propProducts);
     setLoading(propLoading);
     setError(propError);
   }, [propProducts, propLoading, propError]);
+
+  // Auto open edit modal if requested
+  useEffect(() => {
+    if (autoEditProductId && products.length > 0) {
+      const p = products.find(pr => pr.id === autoEditProductId);
+      if (p) openEditModal(p);
+    }
+  }, [autoEditProductId, products]);
 
   // Only fetch products if no props are provided (fallback for standalone usage)
   useEffect(() => {
@@ -111,6 +137,109 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
     } catch (err: any) {
       setError(err.message || 'Failed to delete product');
       console.error('Error deleting product:', err);
+    }
+  };
+
+  // Edit product handlers
+  const openEditModal = (product: Product) => {
+    setEditingProduct(product);
+    setEditForm({
+      name: product.name || '',
+      price: String(product.price ?? ''),
+      description: product.description || '',
+      stock: product.status === 'active' ? '1' : '0',
+    });
+    setDiscountForm({
+      id: product.discount_id,
+      percent: product.discount_percent !== undefined && product.discount_percent !== null ? String(product.discount_percent) : '0',
+      start_date: product.discount_start_date || '',
+      end_date: product.discount_end_date || '',
+      status: (product.discount_status as 'active' | 'inactive') || 'inactive',
+    });
+    setEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setEditModalOpen(false);
+    setEditingProduct(null);
+    setEditForm(null);
+    setDiscountForm(null);
+  };
+
+  const handleEditFormChange = (field: keyof NonNullable<typeof editForm>, value: string) => {
+    setEditForm(prev => prev ? { ...prev, [field]: value } : prev);
+  };
+
+  const handleDiscountFormChange = (field: keyof NonNullable<typeof discountForm>, value: string) => {
+    setDiscountForm(prev => prev ? { ...prev, [field]: value } : prev);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingProduct || !editForm) return;
+    try {
+      setSavingEdit(true);
+      setError(null);
+
+      // Derive status from stock only: 0 => inactive, >0 => active
+      const normalizedStock = editForm.stock !== undefined ? Number(editForm.stock || '0') : undefined;
+      const nextStatus: 'active' | 'inactive' = normalizedStock !== undefined && normalizedStock <= 0 ? 'inactive' : 'active';
+
+      // Upsert product
+      await apiService.upsertProduct({
+        id: editingProduct.id,
+        name: editForm.name,
+        price: Number(editForm.price),
+        description: editForm.description || undefined,
+        status: nextStatus,
+      });
+
+      // Upsert discount
+      if (discountForm) {
+        const percentNum = Number(discountForm.percent || '0');
+        if ((discountForm.id && (percentNum >= 0)) || (!discountForm.id && percentNum > 0)) {
+          if (discountForm.id) {
+            await apiService.upsertDiscount({
+              id: discountForm.id,
+              // company_id cannot change on update
+              // product_id cannot change on update
+              discount_percent: percentNum,
+              status: discountForm.status,
+              start_date: discountForm.start_date || undefined,
+              end_date: discountForm.end_date || undefined,
+            });
+          } else if (percentNum > 0) {
+            await apiService.upsertDiscount({
+              company_id: editingProduct.company_id,
+              product_id: editingProduct.id,
+              discount_percent: percentNum,
+              status: 'active',
+              start_date: discountForm.start_date || undefined,
+              end_date: discountForm.end_date || undefined,
+            });
+          }
+        }
+        // If percent is 0 and discount exists, deactivate it
+        if (discountForm.id && percentNum === 0) {
+          await apiService.upsertDiscount({
+            id: discountForm.id,
+            status: 'inactive',
+          } as any);
+        }
+      }
+
+      // Refresh list
+      if (onRefresh) {
+        onRefresh();
+      } else {
+        await fetchProducts();
+      }
+
+      closeEditModal();
+    } catch (err: any) {
+      setError(err.message || 'Failed to update');
+      console.error('Error updating product/discount:', err);
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -351,6 +480,9 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
                     სტატუსი
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Discount
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Company
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -381,7 +513,7 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
                         {product.primary_image_url && (
                           <img
                             className="h-10 w-10 rounded-lg object-cover mr-3"
-                            src={product.primary_image_url}
+                            src={getProductListThumbUrl(product.primary_image_url as string)}
                             alt={product.name}
                           />
                         )}
@@ -403,10 +535,10 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
                           <span>${formatPrice(product.price)}</span>
                         )}
                       </div>
-                      {product.discount_percent && (
-                        <div className="text-xs text-gray-500">
-                          {product.discount_percent}% off
-                        </div>
+                      {product.discount_percent ? (
+                        <div className="text-xs text-gray-500">{product.discount_percent}% off</div>
+                      ) : (
+                        <div className="text-xs text-red-600">No discount</div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -420,6 +552,13 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
                         {product.status === 'active' ? 'აქტიური' : product.status}
                       </span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {product.discount_percent && product.discount_status === 'active' ? (
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Active</span>
+                      ) : (
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Missing</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {product.company_id}
                     </td>
@@ -428,6 +567,14 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openEditModal(product)}
+                          className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                          title="Edit Product"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Edit
+                        </button>
                         <button
                           onClick={() => handleViewImages(product.id)}
                           className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
@@ -568,6 +715,135 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
                   No images uploaded yet. Upload your first image above.
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Product Modal */}
+      {editModalOpen && editingProduct && editForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full mx-4">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Edit Product #{editingProduct.id}</h2>
+              <button onClick={closeEditModal} className="text-gray-400 hover:text-gray-600">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={(e) => handleEditFormChange('name', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                  <input
+                    type="number"
+                    value={editForm.price}
+                    onChange={(e) => handleEditFormChange('price', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    value={editForm.description}
+                    onChange={(e) => handleEditFormChange('description', e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                {/* Availability derived from stock; field removed */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={editForm.stock ?? ''}
+                    onChange={(e) => handleEditFormChange('stock', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              {/* Discount Section */}
+              {discountForm && (
+                <div className="border-t pt-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Discount</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Percent</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={discountForm.percent}
+                        onChange={(e) => handleDiscountFormChange('percent', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Set a value greater than 0 to make the product usable.</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                      <select
+                        value={discountForm.status}
+                        onChange={(e) => handleDiscountFormChange('status', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                      <input
+                        type="date"
+                        value={discountForm.start_date}
+                        onChange={(e) => handleDiscountFormChange('start_date', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                      <input
+                        type="date"
+                        value={discountForm.end_date}
+                        onChange={(e) => handleDiscountFormChange('end_date', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                  {error}
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-3">
+              <button
+                onClick={closeEditModal}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                disabled={savingEdit}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={savingEdit}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {savingEdit ? 'Saving...' : 'Save Changes'}
+              </button>
             </div>
           </div>
         </div>

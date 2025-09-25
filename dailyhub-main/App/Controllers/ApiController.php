@@ -189,7 +189,10 @@ class ApiController
             // GET /api/analyticsSummary?discount_id
             'analyticsSummary'          => [$this->analyticsService, 'summary'],
             // GET /api/topDiscounts?action&limit
-            'topDiscounts'              => [$this->analyticsService, 'top'],
+			'topDiscounts'              => [$this->analyticsService, 'top'],
+			// GET /api/companyAnalyticsTotals?company_id
+			'companyAnalyticsTotals'    => [$this->analyticsService, 'companyTotals'],
+            // NOTE: active time and retention are included in analyticsSummary response
         ];
     }
 

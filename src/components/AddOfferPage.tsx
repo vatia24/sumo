@@ -30,6 +30,7 @@ const AddOfferPage: React.FC<AddOfferPageProps> = ({ onBack, onProductCreated })
     endDate: '',
     originalPrice: '',
     discountPercentage: '0',
+    stock: '1',
     company_id: 1 // Default company ID - will be updated from context
   });
 
@@ -92,17 +93,25 @@ const AddOfferPage: React.FC<AddOfferPageProps> = ({ onBack, onProductCreated })
       return;
     }
 
+    // Enforce: every product must have a discount
+    if (!formData.discountPercentage || parseFloat(formData.discountPercentage) <= 0) {
+      setError('Discount is required. Please set a discount percentage greater than 0.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       // Prepare product data
+      const quantity = Number(formData.stock || '0');
       const productData = {
         company_id: company.id,
         name: formData.name,
         price: parseFloat(formData.price),
         description: formData.description || undefined,
-        status: 'active' as const,
+        // Map stock to availability with existing status field
+        status: quantity > 0 ? ('active' as const) : ('inactive' as const),
         // Add other fields as needed
       };
 
@@ -152,6 +161,7 @@ const AddOfferPage: React.FC<AddOfferPageProps> = ({ onBack, onProductCreated })
       endDate: '',
       originalPrice: '',
       discountPercentage: '0',
+      stock: '1',
       company_id: 1
     });
     setUploadedFiles([]);
@@ -163,15 +173,7 @@ const AddOfferPage: React.FC<AddOfferPageProps> = ({ onBack, onProductCreated })
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumbs */}
-      <div className="text-sm text-gray-500">
-        <span className="hover:text-gray-700 cursor-pointer">Osen</span>
-        <span className="mx-2">›</span>
-        <span className="hover:text-gray-700 cursor-pointer">eCommerce</span>
-        <span className="mx-2">›</span>
-        <span className="text-gray-700">Add Products</span>
-      </div>
-
+      
       {/* Page Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Add Offer</h1>

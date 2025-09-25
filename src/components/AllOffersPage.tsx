@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Filter, Edit, ChevronLeft, ChevronRight, ChevronDown, X, Loader2 } from 'lucide-react';
 import FilterPanel, { FilterData } from './FilterPanel';
 import { apiService } from '../services/api';
+import { useCompany } from '../contexts/CompanyContext';
 
 interface Product {
   id: number;
@@ -44,6 +45,7 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
   error = null, 
   onRefresh 
 }) => {
+  const { company, refreshCompany } = useCompany();
   const [currentPage, setCurrentPage] = useState(1);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<FilterData>({
@@ -76,6 +78,16 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isLoadingImages, setIsLoadingImages] = useState(false);
   const [productImages, setProductImages] = useState<any[]>([]);
+
+  // Discount modal state
+  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
+  const [selectedProductForDiscount, setSelectedProductForDiscount] = useState<Product | null>(null);
+  const [discountPercent, setDiscountPercent] = useState<string>('');
+  const [discountStartDate, setDiscountStartDate] = useState<string>('');
+  const [discountEndDate, setDiscountEndDate] = useState<string>('');
+  const [discountStatus, setDiscountStatus] = useState<string>('active');
+  const [isSavingDiscount, setIsSavingDiscount] = useState(false);
+  const [discountError, setDiscountError] = useState<string | null>(null);
 
   // Generate 50 sample offers for demonstration - moved outside component to prevent re-generation
   const generateOffers = () => {
@@ -421,6 +433,80 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
     }
   };
 
+  // Discount handlers
+  const openDiscountModal = async (product: Product) => {
+    if (!company) {
+      await refreshCompany();
+    }
+    setSelectedProductForDiscount(product);
+    const existingPercent = typeof product.discount_percent === 'string' ? parseFloat(product.discount_percent) : (product.discount_percent || 0);
+    setDiscountPercent(existingPercent ? String(existingPercent) : '');
+    setDiscountStartDate(product.discount_start_date || '');
+    setDiscountEndDate(product.discount_end_date || '');
+    setDiscountStatus(product.discount_status || 'active');
+    setDiscountError(null);
+    setIsDiscountModalOpen(true);
+  };
+
+  const closeDiscountModal = () => {
+    setIsDiscountModalOpen(false);
+    setSelectedProductForDiscount(null);
+    setIsSavingDiscount(false);
+    setDiscountError(null);
+  };
+
+  const handleSaveDiscount = async () => {
+    try {
+      if (!selectedProductForDiscount) return;
+      if (!company?.id) {
+        setDiscountError('Company not loaded. Please try again.');
+        return;
+      }
+      const percent = parseFloat(discountPercent);
+      if (isNaN(percent) || percent <= 0 || percent > 100) {
+        setDiscountError('Please enter a valid discount percent (1-100).');
+        return;
+      }
+      setIsSavingDiscount(true);
+
+      const payload: any = {
+        company_id: company.id,
+        product_id: selectedProductForDiscount.id,
+        discount_percent: percent,
+        status: discountStatus || 'active',
+        start_date: discountStartDate || undefined,
+        end_date: discountEndDate || undefined,
+      };
+      if (selectedProductForDiscount.discount_id) {
+        payload.id = selectedProductForDiscount.discount_id;
+      }
+
+      await apiService.upsertDiscount(payload);
+
+      if (onRefresh) onRefresh();
+      closeDiscountModal();
+      alert('Discount saved successfully');
+    } catch (e: any) {
+      console.error('Failed to save discount', e);
+      setDiscountError(e?.message || 'Failed to save discount');
+    } finally {
+      setIsSavingDiscount(false);
+    }
+  };
+
+  // Helper to resolve product thumbnail URL
+  const getBaseUrl = () => {
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+    return apiUrl.replace('/api', '');
+  };
+
+  const getProductListThumbUrl = (path?: string) => {
+    if (!path) return '';
+    if (/^https?:\/\//i.test(path)) return path;
+    const filename = path.split(/[\\\//]/).pop() || path;
+    return `${getBaseUrl()}/uploads/products/${filename}`;
+  };
+
 
   const getPageNumbers = () => {
     const pages = [];
@@ -459,42 +545,34 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumbs */}
-      <div className="text-sm text-gray-500">
-        <span className="hover:text-gray-700 cursor-pointer">Osen</span>
-        <span className="mx-2">›</span>
-        <span className="hover:text-gray-700 cursor-pointer">eCommerce</span>
-        <span className="mx-2">›</span>
-        <span className="text-gray-700">Add Products</span>
-      </div>
-
+      
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">All Offers</h1>
-                 <div className="flex items-center space-x-4">
-           <button 
-             onClick={onRefresh}
-             disabled={loading}
-             className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors duration-200 disabled:opacity-50"
-           >
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={onRefresh}
+            disabled={loading}
+            className="btn btn-ghost disabled:opacity-50"
+          >
              <Loader2 size={16} className={loading ? 'animate-spin' : ''} />
              <span>Refresh</span>
            </button>
            <button 
              onClick={() => setIsFilterOpen(true)}
-             className="flex items-center space-x-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+            className="btn btn-primary"
            >
              <Filter size={16} />
              <span>Filters</span>
              {hasActiveFilters && (
-               <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full ml-2">
+              <span className="badge bg-red-500 text-white ml-1">
                  {Object.values(activeFilters).filter(v => v !== '').length}
                </span>
              )}
            </button>
            <button 
              onClick={onAddNew}
-             className="flex items-center space-x-2 bg-accent-purple hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+            className="btn btn-primary"
            >
              <Plus size={16} />
              <span>AddNew +</span>
@@ -543,7 +621,7 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
 
       {/* Loading State */}
       {loading && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+        <div className="card p-8">
           <div className="flex items-center justify-center">
             <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
             <span className="ml-2 text-gray-600">Loading products...</span>
@@ -553,7 +631,7 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
 
       {/* Error State */}
       {error && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="card p-6">
           <div className="text-red-600 bg-red-50 border border-red-200 rounded-lg p-4">
             <p>Error: {error}</p>
             <button 
@@ -568,7 +646,7 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
 
       {/* Table */}
       {!loading && !error && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="card p-0">
         <div className="overflow-x-auto">
           <table className="w-full">
                          <thead className="bg-gray-50">
@@ -595,7 +673,28 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
                  currentOffers.map((product, index) => (
                    <tr key={startIndex + index} className="hover:bg-gray-50">
                      <td className="table-cell font-medium">#{product.id}</td>
-                     <td className="table-cell font-medium">{product.name}</td>
+                    <td className="table-cell font-medium">
+                      <div className="flex items-center gap-3">
+                        {product.primary_image_url && (
+                          <img
+                            className="h-10 w-10 rounded-lg object-cover"
+                            src={getProductListThumbUrl(product.primary_image_url as string)}
+                            alt={product.name}
+                          />
+                        )}
+                        <div>
+                          <div className="font-medium">{product.name}</div>
+                          {(() => {
+                            let dp: any = (product as any).discount_percent;
+                            if (typeof dp === 'string') dp = parseFloat(dp);
+                            if (dp && !isNaN(dp) && dp > 0) {
+                              return <div className="text-xs text-red-600">-{dp}%</div>;
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      </div>
+                    </td>
                      <td className="table-cell text-sm text-gray-600 max-w-xs truncate">
                        {product.description || 'No description'}
                      </td>
@@ -760,11 +859,18 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
                        {new Date(product.created_at).toLocaleDateString()}
                      </td>
                      <td className="table-cell">
-                       <div className="flex items-center space-x-2">
-                         <button className="p-1 hover:bg-gray-100 rounded">
-                           <Edit size={16} className="text-gray-500" />
-                         </button>
-                       </div>
+                      <div className="flex items-center space-x-2">
+                        <button className="p-1 hover:bg-gray-100 rounded" title="Edit product">
+                          <Edit size={16} className="text-gray-500" />
+                        </button>
+                        <button
+                          onClick={() => openDiscountModal(product)}
+                          className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
+                          title="Edit Discount"
+                        >
+                          Edit Discount
+                        </button>
+                      </div>
                      </td>
                    </tr>
                  ))
@@ -823,6 +929,91 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
         onApplyFilters={handleApplyFilters}
         onReset={handleResetFilters}
       />
+
+      {/* Discount Modal */}
+      {isDiscountModalOpen && selectedProductForDiscount && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">{selectedProductForDiscount.name} — Discount</h3>
+              <button onClick={closeDiscountModal} className="p-1 hover:bg-gray-100 rounded">
+                <X size={18} />
+              </button>
+            </div>
+
+            {discountError && (
+              <div className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">
+                {discountError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Discount Percent</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. 25"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={discountStartDate}
+                    onChange={(e) => setDiscountStartDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">End Date</label>
+                  <input
+                    type="date"
+                    value={discountEndDate}
+                    onChange={(e) => setDiscountEndDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Status</label>
+                <select
+                  value={discountStatus}
+                  onChange={(e) => setDiscountStatus(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="active">active</option>
+                  <option value="inactive">inactive</option>
+                  <option value="scheduled">scheduled</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end space-x-3">
+              <button
+                onClick={closeDiscountModal}
+                className="px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+                disabled={isSavingDiscount}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveDiscount}
+                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center"
+                disabled={isSavingDiscount}
+              >
+                {isSavingDiscount && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

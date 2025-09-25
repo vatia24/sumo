@@ -1,66 +1,124 @@
-import React, { useState } from 'react';
-import { Download, TrendingUp, TrendingDown, Calendar, Filter } from 'lucide-react';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
+import React, { useMemo, useState } from 'react';
+import { Download } from 'lucide-react';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, LineChart, Line, LabelList } from 'recharts';
+import { AnalyticsDemographicsBlock, AnalyticsTimeSeriesItem, AnalyticsActionCount } from '../services/api';
 
-const AnalyticsCharts: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('devices');
-  const [timeRange, setTimeRange] = useState('7d');
+interface AnalyticsChartsProps {
+  demographics?: AnalyticsDemographicsBlock;
+  timeseries?: AnalyticsTimeSeriesItem[];
+  byAction?: AnalyticsActionCount[];
+  loading?: boolean;
+  activeTime?: { by_hour: { h: number; total: number }[]; by_dow: { dow: number; total: number }[] };
+  retention?: { unique_users: number; returning_users: number; retention_rate: number | null };
+  timeseriesByAction?: { d: string; action: string; total: number }[];
+}
 
-  // Devices data
-  const devicesData = [
-    { name: 'iOS', value: 45, color: '#ef4444' },
-    { name: 'Android', value: 38, color: '#10b981' },
-    { name: 'Desktop', value: 17, color: '#f97316' }
-  ];
+const COLORS = ['#3b82f6','#10b981','#f97316','#8b5cf6','#ef4444','#06b6d4','#84cc16','#f59e0b'];
 
-  // Age data
-  const ageData = [
-    { age: '-18', value: 12 },
-    { age: '18-24', value: 25 },
-    { age: '25-34', value: 45 },
-    { age: '35-44', value: 32 },
-    { age: '45-64', value: 18 },
-    { age: '65+', value: 8 }
-  ];
+const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeseries, byAction, loading, activeTime, retention, timeseriesByAction }) => {
+  const [activeTab, setActiveTab] = useState('trends');
 
-  // Time series data for trends
-  const timeSeriesData = [
-    { date: 'Mon', views: 85, clicks: 12, conversions: 3 },
-    { date: 'Tue', views: 92, clicks: 15, conversions: 4 },
-    { date: 'Wed', views: 78, clicks: 11, conversions: 2 },
-    { date: 'Thu', views: 105, clicks: 18, conversions: 5 },
-    { date: 'Fri', views: 88, clicks: 14, conversions: 3 },
-    { date: 'Sat', views: 95, clicks: 16, conversions: 4 },
-    { date: 'Sun', views: 82, clicks: 13, conversions: 3 }
-  ];
+  const timeSeriesData = useMemo(() => {
+    if (!timeseries) return [] as { date: string; total: number }[];
+    return timeseries.map(t => ({ date: t.d, total: t.total }));
+  }, [timeseries]);
 
-  // Location data
-  const locationData = [
-    { name: 'Tbilisi', value: 35, color: '#3b82f6' },
-    { name: 'Batumi', value: 28, color: '#10b981' },
-    { name: 'Kutaisi', value: 22, color: '#6b7280' },
-    { name: 'Rustavi', value: 15, color: '#f97316' },
-    { name: 'Other', value: 8, color: '#8b5cf6' }
-  ];
+  const multiSeriesData = useMemo(() => {
+    if (!timeseriesByAction || timeseriesByAction.length === 0) return [] as any[];
+    const byDate: Record<string, any> = {};
+    timeseriesByAction.forEach(row => {
+      const key = row.d;
+      if (!byDate[key]) byDate[key] = { date: key } as any;
+      byDate[key][row.action] = row.total;
+    });
+    return Object.values(byDate);
+  }, [timeseriesByAction]);
 
-  const deviceStats = [
-    { name: 'iOS', value: '45', change: '-3.91%', trend: 'down' },
-    { name: 'Android', value: '38', change: '+3.91%', trend: 'up' },
-    { name: 'Desktop', value: '17', change: '+1.05%', trend: 'up' }
-  ];
+  const deviceData = useMemo(() => {
+    const items = demographics?.device || [];
+    return items.map((d, i) => ({ name: d.k || 'Unknown', value: d.total, color: COLORS[i % COLORS.length] }));
+  }, [demographics]);
+
+  const ageData = useMemo(() => {
+    const items = demographics?.age || [];
+    const total = items.reduce((s, d) => s + d.total, 0) || 1;
+    const order = ['<18', '18-24', '25-34', '35-44', '45-54', '55-64', '65+', 'Unknown'];
+    const mapped = items.map(d => ({
+      age: d.k || 'Unknown',
+      value: d.total,
+      pct: Math.round((d.total / total) * 1000) / 10, // one decimal percentage
+    }));
+    // Sort by predefined order; fall back to value desc
+    mapped.sort((a, b) => {
+      const ia = order.indexOf(a.age);
+      const ib = order.indexOf(b.age);
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return 1;
+      return b.value - a.value;
+    });
+    return mapped;
+  }, [demographics]);
+  const [ageMetric, setAgeMetric] = useState<'percent' | 'count'>('percent');
+
+  const locationData = useMemo(() => {
+    const items = (demographics?.city || []).slice(0, 6);
+    return items.map((d, i) => ({ name: d.k || 'Unknown', value: d.total, color: COLORS[i % COLORS.length] }));
+  }, [demographics]);
+
+  const totalActions = useMemo(() => {
+    return (byAction || []).reduce((sum, a) => sum + a.total, 0);
+  }, [byAction]);
 
   const tabs = [
     { id: 'devices', label: 'Devices' },
     { id: 'trends', label: 'Trends' },
-    { id: 'demographics', label: 'Demographics' }
+    { id: 'demographics', label: 'Demographics' },
+    { id: 'active', label: 'Active Time' },
+    { id: 'retention', label: 'Retention' },
   ];
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+            {tabs.map((tab) => (
+              <button key={tab.id} className="px-4 py-2 text-sm font-medium rounded-md text-gray-400">{tab.label}</button>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-72 bg-gray-100 animate-pulse rounded-xl" />
+          <div className="h-72 bg-gray-100 animate-pulse rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  const isEmpty =
+    (!demographics ||
+      ((demographics.age?.length || 0) === 0 &&
+       (demographics.device?.length || 0) === 0 &&
+       (demographics.city?.length || 0) === 0)) &&
+    ((timeseries?.length || 0) === 0) &&
+    ((byAction?.length || 0) === 0) &&
+    (!activeTime || ((activeTime.by_hour?.length || 0) === 0 && (activeTime.by_dow?.length || 0) === 0)) &&
+    (!retention || retention.unique_users === 0);
+
+  if (isEmpty) {
+    return (
+      <div className="flex items-center justify-center py-16 text-sm text-gray-500">
+        No analytics data for the selected filters.
+      </div>
+    );
+  }
 
   const renderChart = () => {
     switch (activeTab) {
       case 'devices':
         return (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Devices Chart */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">Devices</h3>
@@ -69,12 +127,12 @@ const AnalyticsCharts: React.FC = () => {
                   <span>Generate Report</span>
                 </button>
               </div>
-              
+
               <div className="flex items-center justify-center mb-6">
                 <div className="relative">
                   <PieChart width={200} height={200}>
                     <Pie
-                      data={devicesData}
+                      data={deviceData}
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
@@ -82,7 +140,7 @@ const AnalyticsCharts: React.FC = () => {
                       paddingAngle={5}
                       dataKey="value"
                     >
-                      {devicesData.map((entry, index) => (
+                      {deviceData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -90,25 +148,23 @@ const AnalyticsCharts: React.FC = () => {
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-gray-900">Total</div>
-                      <div className="text-lg font-semibold text-gray-700">100</div>
+                      <div className="text-lg font-semibold text-gray-700">{totalActions}</div>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-3">
-                {deviceStats.map((stat, index) => (
+                {deviceData.length === 0 ? (
+                  <div className="text-sm text-gray-500">No device data</div>
+                ) : deviceData.map((stat, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: devicesData[index]?.color }}></div>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stat.color }}></div>
                       <span className="text-sm text-gray-600">{stat.name}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm font-medium text-gray-900">{stat.value}</span>
-                      <div className={`flex items-center text-xs ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                        {stat.trend === 'up' ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                        <span>{stat.change}</span>
-                      </div>
                     </div>
                   </div>
                 ))}
@@ -122,43 +178,52 @@ const AnalyticsCharts: React.FC = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-gray-900">Performance Trends</h3>
-              <div className="flex items-center space-x-2">
-                <select 
-                  value={timeRange} 
-                  onChange={(e) => setTimeRange(e.target.value)}
-                  className="text-sm border border-gray-200 rounded px-2 py-1"
-                >
-                  <option value="7d">Last 7 days</option>
-                  <option value="30d">Last 30 days</option>
-                  <option value="90d">Last 90 days</option>
-                </select>
-              </div>
+              <div />
             </div>
-            
-            <ResponsiveContainer width="100%" height={400}>
-              <AreaChart data={timeSeriesData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Area type="monotone" dataKey="views" stackId="1" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
-                <Area type="monotone" dataKey="clicks" stackId="2" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
-                <Area type="monotone" dataKey="conversions" stackId="3" stroke="#f97316" fill="#f97316" fillOpacity={0.3} />
-              </AreaChart>
-            </ResponsiveContainer>
-            
+
+            {multiSeriesData.length === 0 ? (
+              timeSeriesData.length === 0 ? (
+                <div className="h-64 flex items-center justify-center text-sm text-gray-500">No time series data</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={400}>
+                  <AreaChart data={timeSeriesData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="total" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )
+            ) : (
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={multiSeriesData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="view" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="clicked" stroke="#10b981" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="redirect" stroke="#f97316" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="map_open" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="share" stroke="#06b6d4" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="favorite" stroke="#ef4444" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+
             <div className="grid grid-cols-3 gap-4 mt-6">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">15.2K</div>
-                <div className="text-sm text-gray-600">Total Views</div>
+                <div className="text-2xl font-bold text-blue-600">{byAction?.find(a => a.action === 'view')?.total ?? 0}</div>
+                <div className="text-sm text-gray-600">Views</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">1.3K</div>
-                <div className="text-sm text-gray-600">Total Clicks</div>
+                <div className="text-2xl font-bold text-green-600">{byAction?.find(a => a.action === 'clicked')?.total ?? 0}</div>
+                <div className="text-sm text-gray-600">Clicks</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">185</div>
-                <div className="text-sm text-gray-600">Conversions</div>
+                <div className="text-2xl font-bold text-orange-600">{byAction?.find(a => a.action === 'redirect')?.total ?? 0}</div>
+                <div className="text-sm text-gray-600">Redirects</div>
               </div>
             </div>
           </div>
@@ -167,63 +232,151 @@ const AnalyticsCharts: React.FC = () => {
       case 'demographics':
         return (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Age Chart */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">Age Distribution</h3>
-                <button className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900">
-                  <Download size={16} />
-                  <span>Generate Report</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <div className="flex bg-gray-100 rounded-md p-1">
+                    <button onClick={() => setAgeMetric('percent')} className={`px-2 py-1 text-xs rounded ${ageMetric === 'percent' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'}`}>%</button>
+                    <button onClick={() => setAgeMetric('count')} className={`px-2 py-1 text-xs rounded ${ageMetric === 'count' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'}`}>#</button>
+                  </div>
+                  <button className="hidden md:flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900">
+                    <Download size={16} />
+                    <span>Export</span>
+                  </button>
+                </div>
               </div>
-              
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={ageData} layout="horizontal" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="age" type="category" width={60} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+
+              {ageData.length === 0 ? (
+                <div className="h-64 flex items-center justify-center text-sm text-gray-500">No age data</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={ageData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" tickFormatter={(v) => ageMetric === 'percent' ? `${v}%` : `${v}`} domain={[0, 'auto']} />
+                    <YAxis dataKey="age" type="category" width={70} />
+                    <Tooltip formatter={(value: any, name) => {
+                      return ageMetric === 'percent' ? [`${value}%`, 'Percentage'] : [value, 'Users'];
+                    }} />
+                    <Bar dataKey={ageMetric === 'percent' ? 'pct' : 'value'} fill="#3b82f6" radius={[0, 4, 4, 0]}>
+                      <LabelList dataKey={ageMetric === 'percent' ? 'pct' : 'value'} position="right" formatter={(v: any) => ageMetric === 'percent' ? `${v}%` : v} className="text-xs fill-gray-700" />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
 
-            {/* Location Chart */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">Geographic Distribution</h3>
               </div>
-              
-              <div className="flex items-center justify-center mb-6">
-                <PieChart width={200} height={200}>
-                  <Pie
-                    data={locationData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {locationData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </div>
+
+              {locationData.length === 0 ? (
+                <div className="h-64 flex items-center justify-center text-sm text-gray-500">No location data</div>
+              ) : (
+                <div className="flex items-center justify-center mb-6">
+                  <PieChart width={200} height={200}>
+                    <Pie
+                      data={locationData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {locationData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </div>
+              )}
 
               <div className="space-y-2">
-                {locationData.map((item, index) => (
+                {locationData.length === 0 ? (
+                  <div className="text-sm text-gray-500">No location breakdown</div>
+                ) : locationData.map((item, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                      <span className="text-sm text-gray-600">Region {index + 1}</span>
+                      <span className="text-sm text-gray-600">{item.name}</span>
                     </div>
-                    <span className="text-sm font-medium text-gray-900">{item.value}%</span>
+                    <span className="text-sm font-medium text-gray-900">{item.value}</span>
                   </div>
                 ))}
               </div>
             </div>
+          </div>
+        );
+
+      case 'active':
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">By Hour of Day</h3>
+              </div>
+              {(!activeTime || activeTime.by_hour.length === 0) ? (
+                <div className="h-64 flex items-center justify-center text-sm text-gray-500">No hourly data</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={activeTime.by_hour.map(h => ({ hour: h.h, total: h.total }))}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="hour" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="total" stroke="#10b981" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">By Day of Week</h3>
+              </div>
+              {(!activeTime || activeTime.by_dow.length === 0) ? (
+                <div className="h-64 flex items-center justify-center text-sm text-gray-500">No day-of-week data</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={activeTime.by_dow.map(d => ({ dow: d.dow, total: d.total }))}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="dow" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="total" fill="#8b5cf6" radius={[4,4,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'retention':
+        return (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Retention</h3>
+            </div>
+            {!retention ? (
+              <div className="h-32 flex items-center justify-center text-sm text-gray-500">No retention data</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">{retention.unique_users}</div>
+                  <div className="text-sm text-gray-600">Unique users</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">{retention.returning_users}</div>
+                  <div className="text-sm text-gray-600">Returning users</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">{retention.retention_rate !== null ? `${(retention.retention_rate*100).toFixed(1)}%` : '—'}</div>
+                  <div className="text-sm text-gray-600">Retention rate</div>
+                </div>
+              </div>
+            )}
           </div>
         );
 
@@ -234,7 +387,6 @@ const AnalyticsCharts: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Tab Navigation */}
       <div className="flex items-center justify-between">
         <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
           {tabs.map((tab) => (
@@ -253,7 +405,6 @@ const AnalyticsCharts: React.FC = () => {
         </div>
       </div>
 
-      {/* Chart Content */}
       {renderChart()}
     </div>
   );

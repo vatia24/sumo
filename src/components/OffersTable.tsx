@@ -12,6 +12,10 @@ interface Product {
   company_id?: number;
   image_url?: string;
   address?: string;
+  // Extended fields for discounts and images
+  primary_image_url?: string;
+  discount_percent?: number;
+  effective_price?: number;
 }
 
 interface OffersTableProps {
@@ -19,20 +23,35 @@ interface OffersTableProps {
   loading?: boolean;
   error?: string | null;
   onRefresh?: () => void;
+  onEdit?: (productId: number) => void;
 }
 
 const OffersTable: React.FC<OffersTableProps> = ({ 
   products = [], 
   loading = false, 
   error = null, 
-  onRefresh 
+  onRefresh,
+  onEdit
 }) => {
+
+  // Helper to resolve product thumbnail URL
+  const getBaseUrl = () => {
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+    return apiUrl.replace('/api', '');
+  };
+
+  const getProductListThumbUrl = (path?: string) => {
+    if (!path) return '';
+    if (/^https?:\/\//i.test(path)) return path;
+    const filename = path.split(/[\\\//]/).pop() || path;
+    return `${getBaseUrl()}/uploads/products/${filename}`;
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">All Products</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Discounts</h2>
         <div className="flex items-center space-x-3">
           <button 
             onClick={onRefresh}
@@ -77,7 +96,7 @@ const OffersTable: React.FC<OffersTableProps> = ({
             <thead className="bg-gray-50">
               <tr>
                 <th className="table-header">ID</th>
-                <th className="table-header">Name</th>
+                <th className="table-header">Discount</th>
                 <th className="table-header">Description</th>
                 <th className="table-header">Price</th>
                 <th className="table-header">Status</th>
@@ -89,23 +108,52 @@ const OffersTable: React.FC<OffersTableProps> = ({
               {products.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                    No products found. Create your first product to get started!
+                    No discounts found.
                   </td>
                 </tr>
               ) : (
                 products.map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50">
                     <td className="table-cell font-medium">#{product.id}</td>
-                    <td className="table-cell font-medium">{product.name}</td>
+                    <td className="table-cell font-medium">
+                      <div className="flex items-center gap-3">
+                        {product.primary_image_url && (
+                          <img
+                            className="h-10 w-10 rounded-lg object-cover"
+                            src={getProductListThumbUrl(product.primary_image_url as string)}
+                            alt={product.name}
+                          />
+                        )}
+                        <div>
+                          <div className="font-medium">{product.name}</div>
+                          {/* Show discount percent under name if available */}
+                          {(() => {
+                            // @ts-ignore allow string or number
+                            let dp = (product as any).discount_percent;
+                            if (typeof dp === 'string') dp = parseFloat(dp);
+                            if (dp && !isNaN(dp) && dp > 0) {
+                              return <div className="text-xs text-red-600">-{dp}%</div>;
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      </div>
+                    </td>
                     <td className="table-cell text-sm text-gray-600 max-w-xs truncate">
                       {product.description || 'No description'}
                     </td>
-                                         <td className="table-cell">
+                    <td className="table-cell">
                        {(() => {
                          try {
-                           if (product.price !== null && product.price !== undefined) {
-                             const numPrice = Number(product.price);
-                             return isNaN(numPrice) ? 'N/A' : `$${numPrice.toFixed(2)}`;
+                          // Prefer effective (discounted) price
+                          let effective = product.effective_price as any;
+                          if (typeof effective === 'string') effective = parseFloat(effective);
+                          if (effective !== null && effective !== undefined && !isNaN(effective)) {
+                            return <span className="text-green-600 font-semibold">${effective.toFixed(2)}</span>;
+                          }
+                          if (product.price !== null && product.price !== undefined) {
+                            const numPrice = Number(product.price);
+                            return isNaN(numPrice) ? 'N/A' : `$${numPrice.toFixed(2)}`;
                            }
                            return 'N/A';
                          } catch (error) {
@@ -127,7 +175,7 @@ const OffersTable: React.FC<OffersTableProps> = ({
                       {new Date(product.created_at).toLocaleDateString()}
                     </td>
                     <td className="table-cell">
-                      <button className="p-1 hover:bg-gray-100 rounded">
+                      <button className="p-1 hover:bg-gray-100 rounded" onClick={() => onEdit && onEdit(product.id)}>
                         <Edit size={16} className="text-gray-500" />
                       </button>
                     </td>

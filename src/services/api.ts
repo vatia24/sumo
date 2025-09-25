@@ -29,6 +29,8 @@ export interface Product {
   image_url?: string;
   address?: string;
   link?: string;
+  // Inventory (optional; backend may ignore if not supported)
+  stock?: number;
   created_at: string;
   updated_at: string;
   // Discount-related fields
@@ -141,14 +143,59 @@ export interface Contact {
   created_at: string;
 }
 
-export interface AnalyticsSummary {
+// Analytics types (discount-level)
+export interface AnalyticsActionCount {
+  action: string;
+  total: number;
+}
+
+export interface AnalyticsSummaryBlock {
+  by_action: AnalyticsActionCount[];
+  ctr: number | null;
+}
+
+export interface AnalyticsDemographicGroupItem {
+  k: string | null;
+  total: number;
+}
+
+export interface AnalyticsDemographicsBlock {
+  age: AnalyticsDemographicGroupItem[];
+  gender: AnalyticsDemographicGroupItem[];
+  city: AnalyticsDemographicGroupItem[];
+  region: AnalyticsDemographicGroupItem[];
+  device: AnalyticsDemographicGroupItem[];
+}
+
+export interface AnalyticsTimeSeriesItem {
+  d: string; // date bucket
+  total: number;
+}
+
+export interface AnalyticsSummaryResponse {
+  summary: AnalyticsSummaryBlock;
+  demographics: AnalyticsDemographicsBlock;
+  timeseries: AnalyticsTimeSeriesItem[];
+  timeseries_by_action?: { d: string; action: string; total: number }[];
+  active_time?: {
+    by_hour: { h: number; total: number }[];
+    by_dow: { dow: number; total: number }[];
+  };
+  retention?: {
+    unique_users: number;
+    returning_users: number;
+    retention_rate: number | null;
+  };
+}
+
+export interface CompanyAnalyticsTotals {
   total_views: number;
   total_clicks: number;
-  total_conversions: number;
-  conversion_rate: number;
-  period: string;
-  demographics?: any;
-  timeseries?: any;
+  total_redirects: number;
+  total_map_open: number;
+  total_shares: number;
+  total_favorites: number;
+  ctr: number | null;
 }
 
 export interface ProductImage {
@@ -632,7 +679,7 @@ class ApiService {
   // Analytics Methods
   async trackAction(data: {
     discount_id: number;
-    action: 'view' | 'clicked' | 'redirect' | 'map_open' | 'share' | 'favorite';
+    action: 'view' | 'clicked' | 'redirect' | 'map_open' | 'share' | 'favorite' | 'not_interested';
     device_type?: string;
     city?: string;
     region?: string;
@@ -644,7 +691,8 @@ class ApiService {
   }
 
   async analyticsSummary(params: {
-    discount_id: number;
+    discount_id?: number;
+    company_id?: number;
     from?: string;
     to?: string;
     device_type?: string;
@@ -653,8 +701,8 @@ class ApiService {
     age_group?: string;
     gender?: string;
     granularity?: string;
-  }): Promise<AnalyticsSummary> {
-    const response = await this.request<AnalyticsSummary>('GET', 'analyticsSummary', params);
+  }): Promise<AnalyticsSummaryResponse> {
+    const response = await this.request<AnalyticsSummaryResponse>('GET', 'analyticsSummary', params);
     return response.data!;
   }
 
@@ -669,8 +717,22 @@ class ApiService {
     age_group?: string;
     gender?: string;
     company_id?: number;
-  }): Promise<{ top: Discount[] }> {
-    const response = await this.request<{ top: Discount[] }>('GET', 'topDiscounts', params);
+  }): Promise<{ top: { discount_id: number; total: number }[] }> {
+    const response = await this.request<{ top: { discount_id: number; total: number }[] }>('GET', 'topDiscounts', params);
+    return response.data!;
+  }
+
+  async companyAnalyticsTotals(params: {
+    company_id: number;
+    from?: string;
+    to?: string;
+    device_type?: string;
+    city?: string;
+    region?: string;
+    age_group?: string;
+    gender?: string;
+  }): Promise<{ totals: CompanyAnalyticsTotals }> {
+    const response = await this.request<{ totals: CompanyAnalyticsTotals }>('GET', 'companyAnalyticsTotals', params);
     return response.data!;
   }
 }
