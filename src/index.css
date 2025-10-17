@@ -11,7 +11,16 @@
   }
   
   body {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'TBC Contractica CAPS', 'Inter', system-ui, sans-serif;
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Use TBC Contractica for headings */
+  h1, h2, h3, .heading, .subheading {
+    font-family: 'TBC Contractica CAPS', 'Inter', system-ui, sans-serif;
+    font-weight: 600;
   }
   
   #root {
@@ -26,39 +35,79 @@
     font-style: normal;
     font-display: swap;
   }
+
+  /* TBC Contractica CAPS loaded via public/index.html */
+
+  /* Design tokens */
+  :root {
+    --color-bg-surface: 255 255 255; /* white */
+    --color-bg-muted: 248 250 252; /* slate-50 */
+    --color-text: 17 24 39; /* gray-900 */
+    --color-text-muted: 75 85 99; /* gray-600 */
+    --color-border: 229 231 235; /* gray-200 */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+
+  .skip-link {
+    position: absolute;
+    left: 8px;
+    top: -40px;
+    z-index: 50;
+    background: white;
+    color: #111827;
+    padding: 8px 12px;
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgb(229 231 235);
+  }
+  .skip-link:focus {
+    top: 8px;
+    outline: none;
+  }
 }
 
 @layer components {
   .sidebar {
-    font-family: 'LGV Anastasia', 'Inter', system-ui, sans-serif;
+    font-family: 'TBC Contractica CAPS', 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.02em;
   }
   
   .sidebar-item {
-    @apply flex items-center gap-3 px-3 py-3 text-gray-300 hover:bg-blue-600 hover:text-white rounded-lg transition-colors duration-200 text-base;
+    @apply flex items-center justify-between gap-3 px-4 py-3 text-slate-100 hover:bg-blue-600 hover:text-white rounded-lg transition-colors duration-200 text-xs font-bold;
     align-items: center;
     line-height: 1;
+    min-height: 44px;
   }
   
   .sidebar-item.active {
     @apply bg-blue-600 text-white;
   }
   
-  .sidebar-item span {
-    display: flex;
-    align-items: center;
-    line-height: 1;
-  }
+  .sidebar-item svg { position: relative; top: 1px; }
+  .sidebar-item span { line-height: 1.1; }
   
   .metric-card {
-    @apply bg-white rounded-xl p-6 shadow-sm border border-gray-100;
+    @apply bg-white rounded-2xl p-6 shadow-md border border-gray-100 transition-shadow hover:shadow-lg;
   }
   
   .table-header {
-    @apply px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider;
+    @apply px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider;
   }
   
   .table-cell {
     @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
+  }
+
+  /* Compact density support */
+  .table-compact .table-header {
+    @apply py-2;
+  }
+  .table-compact .table-cell {
+    @apply py-2;
   }
 
   /* Shared UI primitives */
@@ -66,12 +115,16 @@
     @apply bg-white rounded-xl p-6 shadow-sm border border-gray-100;
   }
 
+  .skeleton {
+    @apply animate-pulse bg-gray-100 rounded;
+  }
+
   .icon-button {
-    @apply inline-flex items-center justify-center h-9 w-9 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors;
+    @apply inline-flex items-center justify-center h-9 w-9 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-white;
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-white;
   }
 
   .btn-primary {
@@ -99,6 +152,53 @@
   }
 
   .scroll-area {
-    @apply overflow-y-auto;
+    @apply overflow-y-scroll;
+    scrollbar-gutter: stable;
   }
+
+  /* shadcn-like building blocks */
+  .navbar {
+    @apply sticky top-0 z-40 bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-gray-200;
+  }
+
+  .popover {
+    @apply bg-white rounded-xl shadow-lg border border-gray-200 p-2;
+  }
+
+  /* Prevent layout shift when vertical scrollbar appears */
+  .stable-scroll {
+    scrollbar-gutter: stable;
+  }
+
+  .menu-item {
+    @apply w-full px-4 py-2 text-left text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-gray-700;
+  }
+}
+
+/* Lightweight motion primitives */
+@keyframes fade-in {
+  from { opacity: 0 }
+  to { opacity: 1 }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(8px); opacity: 0 }
+  to { transform: translateY(0); opacity: 1 }
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.98); opacity: 0 }
+  to { transform: scale(1); opacity: 1 }
+}
+
+@layer utilities {
+  .animate-fade { animation: fade-in 300ms ease-out both; }
+  .animate-slide-up { animation: slide-up 350ms ease-out both; }
+  .animate-scale-in { animation: scale-in 250ms ease-out both; }
+  .transition-base { transition: all 200ms ease-out; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade, .animate-slide-up, .animate-scale-in { animation: none !important; }
+  .transition-base { transition: none !important; }
 }

@@ -97,6 +97,10 @@ class ProductService
         }
 
         $id = $this->productModel->upsertProduct($payload);
+        // Optional: set categories if provided
+        if (!empty($data['category_ids']) && is_array($data['category_ids'])) {
+            (new \App\Models\CategoryModel())->setProductCategories((int)$id, $data['category_ids']);
+        }
         return ['id' => $id];
     }
 

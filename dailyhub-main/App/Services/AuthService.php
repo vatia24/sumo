@@ -379,4 +379,50 @@ class AuthService
             throw new ApiException(401, 'CANNOT_AUTHORIZE', $e->getMessage());
         }
     }
+
+    /**
+     * Return current authenticated user using Bearer token.
+     *
+     * @throws ApiException
+     */
+    public function currentUser(): array
+    {
+        // Validate token and ensure it exists server-side
+        $decoded = $this->authorizeRequest();
+
+        // Extract user id from token payload; payload may be under data
+        $userId = 0;
+        if (isset($decoded->data) && isset($decoded->data->id)) {
+            $userId = (int)$decoded->data->id;
+        } elseif (isset($decoded->id)) {
+            $userId = (int)$decoded->id;
+        }
+
+        if ($userId <= 0) {
+            throw new ApiException(401, 'UNAUTHORIZED', 'Invalid token payload');
+        }
+
+        // Fetch user from DB
+        $pdo = \Config\Db::getInstance();
+        $stmt = $pdo->prepare('SELECT id, username, name, email, mobile, user_type FROM users WHERE id = :id');
+        $stmt->bindParam(':id', $userId, \PDO::PARAM_INT);
+        $stmt->execute();
+        $user = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $stmt->closeCursor();
+
+        if (!$user) {
+            throw new ApiException(404, 'NOT_FOUND', 'User not found');
+        }
+
+        $identifier = $user['email'] ?: ($user['mobile'] ?: $user['username']);
+
+        return [
+            'id' => (int)$user['id'],
+            'identifier' => $identifier,
+            'name' => $user['name'],
+            'email' => $user['email'],
+            'mobile' => $user['mobile'],
+            'role' => $user['user_type'],
+        ];
+    }
 }

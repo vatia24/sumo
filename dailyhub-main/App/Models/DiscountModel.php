@@ -86,7 +86,12 @@ class DiscountModel
                 $pos++;
             }
         }
-        if ($hasLimit) $stmt->bindValue(':limit', (int)$filters['limit'], PDO::PARAM_INT);
+        if ($hasLimit) {
+            $limit = (int)$filters['limit'];
+            if ($limit <= 0) $limit = 20;
+            if ($limit > 200) $limit = 200;
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        }
         if ($hasOffset) $stmt->bindValue(':offset', (int)$filters['offset'], PDO::PARAM_INT);
 
         $stmt->execute();

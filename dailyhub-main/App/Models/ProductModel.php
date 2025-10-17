@@ -255,10 +255,19 @@ class ProductModel
                 $params[':q'] = '%' . $filters['q'] . '%';
             }
 
+            // Enforce a hard upper cap to prevent slow, heavy responses
             $limit = isset($filters['limit']) ? max(0, (int)$filters['limit']) : 20;
+            $limit = min($limit, 200);
             $offset = isset($filters['offset']) ? max(0, (int)$filters['offset']) : 0;
 
             $sql = 'SELECT p.* FROM product p';
+            $join = '';
+            if (!empty($filters['category_id'])) {
+                $join = ' INNER JOIN product_category pc ON pc.product_id = p.id';
+                $where[] = 'pc.category_id = :category_id';
+                $params[':category_id'] = (int)$filters['category_id'];
+            }
+            $sql .= $join;
             if ($where) {
                 $sql .= ' WHERE ' . implode(' AND ', $where);
             }

@@ -1,5 +1,7 @@
 // API Configuration
+// Point to owner/admin API by default; can be overridden via env
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+// Secondary backend constant removed; user is fetched from same backend now
 
 // Types
 export interface ApiResponse<T = any> {
@@ -12,7 +14,6 @@ export interface ApiResponse<T = any> {
 export interface User {
   id: number;
   identifier: string;
-  role: 'customer' | 'owner' | 'manager' | 'legal_person';
   name?: string;
   email?: string;
   mobile?: string;
@@ -45,6 +46,8 @@ export interface Product {
   primary_image_url?: string;
   effective_price?: number;
   discount_amount?: number;
+  // Category fields (optional; populated when requested)
+  category_ids?: number[];
 }
 
 export interface Company {
@@ -270,7 +273,7 @@ class ApiService {
         url += `?${params.toString()}`;
       }
 
-      console.log('API Request:', {
+      if (process.env.REACT_APP_DEBUG === 'true') console.log('API Request:', {
         url,
         method,
         headers: this.getHeaders(),
@@ -278,14 +281,14 @@ class ApiService {
       });
 
       const response = await fetch(url, options);
-      console.log('API Response Status:', response.status);
-      console.log('API Response Headers:', response.headers);
+      if (process.env.REACT_APP_DEBUG === 'true') console.log('API Response Status:', response.status);
+      if (process.env.REACT_APP_DEBUG === 'true') console.log('API Response Headers:', response.headers);
       
       const result = await response.json();
-      console.log('API Response Data:', result);
+      if (process.env.REACT_APP_DEBUG === 'true') console.log('API Response Data:', result);
 
       if (!response.ok) {
-        console.error('API Error Response:', result);
+        if (process.env.REACT_APP_DEBUG === 'true') console.error('API Error Response:', result);
         
         // Handle 401 Unauthorized - token expired or invalid
         if (response.status === 401) {
@@ -301,8 +304,8 @@ class ApiService {
 
       return result;
     } catch (error: any) {
-      console.error('API Error:', error);
-      console.error('API Error Details:', {
+      if (process.env.REACT_APP_DEBUG === 'true') console.error('API Error:', error);
+      if (process.env.REACT_APP_DEBUG === 'true') console.error('API Error Details:', {
         message: error.message,
         stack: error.stack,
         url: `${API_BASE_URL}/${endpoint}`
@@ -316,8 +319,13 @@ class ApiService {
     const response = await this.request<{ token: string; refresh_token: string; expires_in: number }>('POST', 'authorize', { identifier, password });
     if (response.data?.token && response.data?.refresh_token) {
       this.setTokens(response.data.token, response.data.refresh_token);
-      // Decode JWT token to get user information
-      const user = this.decodeJWTToken(response.data.token);
+      // Prefer canonical user from backend (same API) and fall back to JWT decode
+      let user: User;
+      try {
+        user = await this.fetchCurrentUser();
+      } catch (e) {
+        user = this.decodeJWTToken(response.data.token);
+      }
       return { ...response.data, user };
     }
     throw new Error('Invalid response from server');
@@ -333,27 +341,40 @@ class ApiService {
       }).join(''));
       
       const payload = JSON.parse(jsonPayload);
-      console.log('JWT payload:', payload);
+      if (process.env.REACT_APP_DEBUG === 'true') console.log('JWT payload:', payload);
       
       // The user data is nested under 'data' field in the JWT payload
       const userData = payload.data;
-      console.log('JWT userData:', userData);
+      if (process.env.REACT_APP_DEBUG === 'true') console.log('JWT userData:', userData);
       
       const user = {
         id: userData.id,
         identifier: userData.identifier,
-        role: userData.role as 'customer' | 'owner' | 'manager' | 'legal_person',
         name: userData.name,
         email: userData.email,
         mobile: userData.mobile
       };
       
-      console.log('Decoded user:', user);
+      if (process.env.REACT_APP_DEBUG === 'true') console.log('Decoded user:', user);
       return user;
     } catch (error) {
-      console.error('Error decoding JWT token:', error);
+      if (process.env.REACT_APP_DEBUG === 'true') console.error('Error decoding JWT token:', error);
       throw new Error('Invalid token format');
     }
+  }
+
+  // Fetch current user from same backend (dailyhub-main)
+  public async fetchCurrentUser(): Promise<User> {
+    if (!this.token) throw new Error('Not authenticated');
+    const response = await this.request<User>('GET', 'me', {});
+    const u: any = response.data as any;
+    return {
+      id: (u as any).id,
+      identifier: (u as any).identifier ?? String((u as any).id),
+      name: (u as any).name,
+      email: (u as any).email,
+      mobile: (u as any).mobile,
+    } as User;
   }
 
   async registerUser(userData: {
@@ -374,7 +395,7 @@ class ApiService {
   }
 
   async logout(): Promise<void> {
-    await this.request('POST', 'logout');
+    await this.request('POST', 'logout', {});
     this.clearTokens();
   }
 
@@ -459,6 +480,32 @@ class ApiService {
     return response.data!;
   }
 
+  // Category Methods
+  async listCategories(params: { parent_id?: number | null; q?: string; limit?: number; offset?: number }): Promise<{ categories: { id: number; name: string; slug: string; parent_id?: number; image_path?: string }[] }>{
+    const response = await this.request<{ categories: { id: number; name: string; slug: string; parent_id?: number; image_path?: string }[] }>('GET', 'listCategories', params);
+    return response.data!;
+  }
+
+  async upsertCategory(payload: { id?: number; name: string; slug?: string; parent_id?: number | null; image_path?: string }): Promise<{ id: number }>{
+    const response = await this.request<{ id: number }>('POST', 'upsertCategory', payload);
+    return response.data!;
+  }
+
+  async deleteCategory(id: number): Promise<{ deleted: boolean }>{
+    const response = await this.request<{ deleted: boolean }>('POST', 'deleteCategory', { id });
+    return response.data!;
+  }
+
+  async uploadCategoryImage(id: number, file_base64: string): Promise<{ path: string }>{
+    const response = await this.request<{ path: string }>('POST', 'uploadCategoryImage', { id, file_base64 });
+    return response.data!;
+  }
+
+  async setProductCategories(product_id: number, category_ids: number[]): Promise<{ ok: boolean }>{
+    const response = await this.request<{ ok: boolean }>('POST', 'setProductCategories', { product_id, category_ids });
+    return response.data!;
+  }
+
   async deleteProductImage(image_id: number): Promise<{ deleted: boolean }> {
     const response = await this.request<{ deleted: boolean }>('POST', 'deleteProductImage', { image_id });
     return response.data!;
@@ -481,11 +528,11 @@ class ApiService {
     // Check cache first
     if (this.companyDataCache && 
         (Date.now() - this.companyDataCache.timestamp) < this.CACHE_DURATION) {
-      console.log('CompanyPage: Using cached company data');
+      if (process.env.REACT_APP_DEBUG === 'true') console.log('CompanyPage: Using cached company data');
       return this.companyDataCache.data;
     }
 
-    console.log('CompanyPage: Fetching fresh company data from API');
+    if (process.env.REACT_APP_DEBUG === 'true') console.log('CompanyPage: Fetching fresh company data from API');
     const response = await this.request<{ company: Company }>('GET', 'getUserCompany', {});
     const company = response.data!.company;
     
@@ -517,11 +564,11 @@ class ApiService {
     // Check cache first
     if (this.companyHoursCache[company_id] && 
         (Date.now() - this.companyHoursCache[company_id].timestamp) < this.CACHE_DURATION) {
-      console.log('CompanyPage: Using cached company hours data');
+      if (process.env.REACT_APP_DEBUG === 'true') console.log('CompanyPage: Using cached company hours data');
       return this.companyHoursCache[company_id].data;
     }
 
-    console.log('CompanyPage: Fetching fresh company hours data from API');
+    if (process.env.REACT_APP_DEBUG === 'true') console.log('CompanyPage: Fetching fresh company hours data from API');
     const response = await this.request<{ hours: CompanyHours[] }>('GET', 'getCompanyHours', { company_id: company_id.toString() });
     const hoursData = response.data!;
     

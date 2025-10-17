@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Filter, Edit, ChevronLeft, ChevronRight, ChevronDown, X, Loader2 } from 'lucide-react';
+import { useI18n } from '../i18n';
+import { Plus, Filter, Edit, ChevronLeft, ChevronRight, ChevronDown, X, Loader2, ArrowUpDown, CheckSquare, Square } from 'lucide-react';
 import FilterPanel, { FilterData } from './FilterPanel';
 import { apiService } from '../services/api';
 import { useCompany } from '../contexts/CompanyContext';
@@ -46,7 +47,14 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
   onRefresh 
 }) => {
   const { company, refreshCompany } = useCompany();
+  const { t } = useI18n();
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [isCompact, setIsCompact] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState<number>(-1);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<FilterData>({
     title: '',
@@ -59,8 +67,28 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
     finalPrice: '',
     status: ''
   });
+  const [sortBy, setSortBy] = useState<'name' | 'price' | 'discount' | 'created_at'>('created_at');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  const itemsPerPage = 15;
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // Keyboard shortcut: R to refresh
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      const isTyping = tag === 'input' || tag === 'textarea';
+      if (!isTyping && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && (e.key === 'r' || e.key === 'R')) {
+        e.preventDefault();
+        onRefresh?.();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onRefresh]);
   
   // State for inline editing
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
@@ -127,9 +155,24 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
   // Use products from props instead of fetching
   const allOffers = products;
 
+  // Build suggestions based on product names
+  const suggestions = React.useMemo(() => {
+    const q = debouncedSearch.toLowerCase();
+    if (!q) return [] as string[];
+    const names = Array.from(new Set(products.map(p => p.name)));
+    return names.filter(n => n.toLowerCase().includes(q)).slice(0, 8);
+  }, [debouncedSearch, products]);
+
   // Filter offers based on active filters
   const filterOffers = (offers: Product[], filters: FilterData) => {
     return offers.filter(offer => {
+      // Quick search (name or description)
+      if (debouncedSearch) {
+        const hay = `${offer.name || ''} ${offer.description || ''}`.toLowerCase();
+        if (!hay.includes(debouncedSearch.toLowerCase())) {
+          return false;
+        }
+      }
       // Title/Name filter
       if (filters.title && !offer.name.toLowerCase().includes(filters.title.toLowerCase())) {
         return false;
@@ -192,13 +235,37 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
   };
 
   const filteredOffers = filterOffers(allOffers, activeFilters);
+  const sortedOffers = React.useMemo(() => {
+    const list = [...filteredOffers];
+    list.sort((a, b) => {
+      const dir = sortDir === 'asc' ? 1 : -1;
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name) * dir;
+        case 'price': {
+          const ap = Number(a.price || 0);
+          const bp = Number(b.price || 0);
+          return (ap - bp) * dir;
+        }
+        case 'discount': {
+          const ad = Number(a.discount_percent || 0);
+          const bd = Number(b.discount_percent || 0);
+          return (ad - bd) * dir;
+        }
+        case 'created_at':
+        default:
+          return (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) * dir;
+      }
+    });
+    return list;
+  }, [filteredOffers, sortBy, sortDir]);
   const totalItems = filteredOffers.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   
   // Calculate pagination
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentOffers = filteredOffers.slice(startIndex, endIndex);
+  const currentOffers = sortedOffers.slice(startIndex, endIndex);
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -209,6 +276,34 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
   const handleApplyFilters = (filters: FilterData) => {
     setActiveFilters(filters);
     setCurrentPage(1); // Reset to first page when filters are applied
+  };
+
+  const handleSuggestionClick = (text: string) => {
+    setSearchInput(text);
+    setDebouncedSearch(text);
+    setShowSuggestions(false);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions && suggestions.length > 0 && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      setShowSuggestions(true);
+      return;
+    }
+    if (!showSuggestions) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightIndex((i) => (i + 1) % suggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightIndex((i) => (i - 1 + suggestions.length) % suggestions.length);
+    } else if (e.key === 'Enter') {
+      if (highlightIndex >= 0 && highlightIndex < suggestions.length) {
+        e.preventDefault();
+        handleSuggestionClick(suggestions[highlightIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+    }
   };
 
   const handleResetFilters = () => {
@@ -503,7 +598,7 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
   const getProductListThumbUrl = (path?: string) => {
     if (!path) return '';
     if (/^https?:\/\//i.test(path)) return path;
-    const filename = path.split(/[\\\//]/).pop() || path;
+    const filename = path.split(/[\\/]/).pop() || path;
     return `${getBaseUrl()}/uploads/products/${filename}`;
   };
 
@@ -548,34 +643,96 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
       
       {/* Page Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">All Offers</h1>
-        <div className="flex items-center space-x-3">
+        <h1 className="text-3xl font-bold text-gray-900">{t('dashboard.discounts')}</h1>
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+          <div className="relative">
+            <input
+              value={searchInput}
+              onChange={(e) => { setSearchInput(e.target.value); setShowSuggestions(true); setHighlightIndex(-1); }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 120)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder={t('common.searchByName')}
+              className="input w-64"
+              aria-autocomplete="list"
+              aria-expanded={showSuggestions}
+              aria-controls="offers-search-suggestions"
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <ul id="offers-search-suggestions" className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto">
+                {suggestions.map((s, i) => (
+                  <li key={s}>
+                    <button
+                      type="button"
+                      className={`w-full text-left px-3 py-2 text-sm ${i === highlightIndex ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}`}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handleSuggestionClick(s)}
+                    >
+                      {s}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <button 
             onClick={onRefresh}
             disabled={loading}
+            aria-label={t('common.refresh')}
+            title={t('common.refresh')}
             className="btn btn-ghost disabled:opacity-50"
           >
              <Loader2 size={16} className={loading ? 'animate-spin' : ''} />
-             <span>Refresh</span>
+           </button>
+           <button 
+            onClick={() => setIsCompact(v => !v)}
+            className="btn btn-ghost"
+            title={t('common.toggleDensity')}
+           >
+             {isCompact ? t('common.comfortable') : t('common.compact')}
            </button>
            <button 
              onClick={() => setIsFilterOpen(true)}
             className="btn btn-primary"
            >
              <Filter size={16} />
-             <span>Filters</span>
+            <span>{t('common.filters') || 'ფილტრები'}</span>
              {hasActiveFilters && (
               <span className="badge bg-red-500 text-white ml-1">
                  {Object.values(activeFilters).filter(v => v !== '').length}
                </span>
              )}
            </button>
+           <div className="relative">
+            <label className="sr-only" htmlFor="sortBy">{t('common.sortBy')}</label>
+             <select
+               id="sortBy"
+               className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+               value={sortBy}
+               onChange={(e) => setSortBy(e.target.value as any)}
+              aria-label={t('common.sortBy')}
+             >
+               <option value="created_at">{t('common.newest') || 'უახლესი'}</option>
+              <option value="name">{t('table.discount')}</option>
+              <option value="price">{t('table.price')}</option>
+               <option value="discount">%-ი</option>
+             </select>
+           </div>
+           <button
+             className="btn btn-ghost"
+            aria-label={t('common.toggleSortDirection')}
+            title={t('common.toggleSortDirection')}
+             onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+           >
+             <ArrowUpDown size={16} />
+             <span className="hidden sm:inline">{sortDir === 'asc' ? '↑' : '↓'}</span>
+           </button>
            <button 
              onClick={onAddNew}
             className="btn btn-primary"
            >
              <Plus size={16} />
-             <span>AddNew +</span>
+            <span>{t('common.addOffer')}</span>
            </button>
          </div>
       </div>
@@ -584,12 +741,12 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
       {hasActiveFilters && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-blue-900">Active Filters:</h3>
+            <h3 className="text-sm font-medium text-blue-900">{t('common.activeFilters')}</h3>
             <button
               onClick={handleResetFilters}
               className="text-sm text-blue-600 hover:text-blue-800"
             >
-              Clear All
+              {t('common.clearAll')}
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -631,14 +788,14 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
 
       {/* Error State */}
       {error && (
-        <div className="card p-6">
+          <div className="card p-6">
           <div className="text-red-600 bg-red-50 border border-red-200 rounded-lg p-4">
-            <p>Error: {error}</p>
+            <p>{t('common.error')}: {error}</p>
             <button 
               onClick={onRefresh}
               className="mt-2 text-sm text-red-700 underline hover:no-underline"
             >
-              Try again
+              {t('common.retry')}
             </button>
           </div>
         </div>
@@ -646,49 +803,69 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
 
       {/* Table */}
       {!loading && !error && (
-        <div className="card p-0">
-        <div className="overflow-x-auto">
+        <div className={`card p-0 ${isCompact ? 'table-compact' : ''}`}>
+        <div className="overflow-x-auto overflow-y-auto max-h-[60vh] min-h-[60vh] stable-scroll">
           <table className="w-full">
-                         <thead className="bg-gray-50">
+             <thead className="bg-gray-50 sticky top-0 z-10">
                <tr>
-                 <th className="table-header">ID</th>
-                 <th className="table-header">Name</th>
-                 <th className="table-header">Description</th>
-                 <th className="table-header">Original Price</th>
-                 <th className="table-header">Discount %</th>
-                 <th className="table-header">Final Price</th>
-                 <th className="table-header">Status</th>
-                 <th className="table-header">Created</th>
-                 <th className="table-header">Actions</th>
+                <th className="table-header">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all"
+                    onChange={(e) => handleSelectAll((e.target as HTMLInputElement).checked)}
+                    checked={currentOffers.length > 0 && currentOffers.every((p) => selectedProducts.has(p.id))}
+                  />
+                </th>
+                <th className="table-header">{t('table.discount')}</th>
+                <th className="table-header">{t('table.description')}</th>
+                <th className="table-header text-right">{t('table.price')}</th>
+                <th className="table-header">{t('table.discountPercent')}</th>
+                <th className="table-header text-right">{t('table.finalPrice')}</th>
+                <th className="table-header">{t('table.status')}</th>
+                <th className="table-header">{t('table.created')}</th>
+                <th className="table-header">{t('table.actions')}</th>
                </tr>
              </thead>
              <tbody className="divide-y divide-gray-200">
                {currentOffers.length === 0 ? (
                  <tr>
-                   <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                     No products found. Create your first product to get started!
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                    {t('products.empty')}
                    </td>
                  </tr>
                ) : (
                  currentOffers.map((product, index) => (
                    <tr key={startIndex + index} className="hover:bg-gray-50">
-                     <td className="table-cell font-medium">#{product.id}</td>
-                    <td className="table-cell font-medium">
-                      <div className="flex items-center gap-3">
-                        {product.primary_image_url && (
-                          <img
-                            className="h-10 w-10 rounded-lg object-cover"
-                            src={getProductListThumbUrl(product.primary_image_url as string)}
-                            alt={product.name}
-                          />
-                        )}
+                   <td className="table-cell">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select product ${product.name}`}
+                        onChange={(e) => handleProductSelection(product.id, (e.target as HTMLInputElement).checked)}
+                        checked={selectedProducts.has(product.id)}
+                      />
+                    </td>
+                   <td className="table-cell font-medium">
+                      <div className="flex items-center gap-3 min-w-[220px]">
+                        <div className="h-10 w-10 rounded-lg overflow-hidden bg-gray-100 text-gray-500 flex items-center justify-center">
+                          {product.primary_image_url ? (
+                            <img
+                              className="h-full w-full object-cover"
+                              src={getProductListThumbUrl(product.primary_image_url as string)}
+                              alt={product.name || 'Product'}
+                            />
+                          ) : (
+                            <span className="text-sm font-medium">
+                              {(product.name || 'NA').split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
                         <div>
-                          <div className="font-medium">{product.name}</div>
+                          <div className="font-medium text-gray-900">{product.name}</div>
                           {(() => {
                             let dp: any = (product as any).discount_percent;
                             if (typeof dp === 'string') dp = parseFloat(dp);
                             if (dp && !isNaN(dp) && dp > 0) {
-                              return <div className="text-xs text-red-600">-{dp}%</div>;
+                              return <div className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-rose-50 text-rose-700 mt-0.5">-{dp}%</div>;
                             }
                             return null;
                           })()}
@@ -698,7 +875,7 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
                      <td className="table-cell text-sm text-gray-600 max-w-xs truncate">
                        {product.description || 'No description'}
                      </td>
-                                           <td className="table-cell">
+                     <td className="table-cell text-right">
                         {editingProductId === product.id ? (
                           <div className="flex items-center space-x-2">
                             <input
@@ -738,51 +915,26 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
                             )}
                           </div>
                         ) : (
-                          <div 
-                            className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 rounded px-2 py-1 -mx-2"
-                            onClick={() => handleStartEditPrice(product)}
-                            title="Click to edit price"
-                          >
-                            <span className={(() => {
-                              try {
-                                if (product.price !== null && product.price !== undefined) {
-                                  const numPrice = Number(product.price);
-                                  // Convert discount_percent to number if it's a string
-                                  let discountPercent = product.discount_percent;
-                                  if (typeof discountPercent === 'string') {
-                                    discountPercent = parseFloat(discountPercent);
-                                  }
-                                  const hasDiscount = discountPercent && discountPercent > 0;
-                                  const priceText = isNaN(numPrice) ? 'N/A' : `$${numPrice.toFixed(2)}`;
-                                  return hasDiscount ? 'line-through text-gray-500' : '';
-                                }
-                                return '';
-                              } catch (error) {
-                                console.error('Error formatting price:', error, product.price);
-                                return '';
+                          (() => {
+                            try {
+                              let effective = product.effective_price as any;
+                              if (typeof effective === 'string') effective = parseFloat(effective);
+                              if (effective !== null && effective !== undefined && !isNaN(effective)) {
+                                return <span className="text-green-600 font-semibold tabular-nums">${effective.toFixed(2)}</span>;
                               }
-                            })()}>
-                              {(() => {
-                                try {
-                                  if (product.price !== null && product.price !== undefined) {
-                                    const numPrice = Number(product.price);
-                                    const priceText = isNaN(numPrice) ? 'N/A' : `$${numPrice.toFixed(2)}`;
-                                    return priceText;
-                                  }
-                                  return 'N/A';
-                                } catch (error) {
-                                  console.error('Error formatting price:', error, product.price);
-                                  return 'N/A';
-                                }
-                              })()}
-                            </span>
-                            <svg className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </div>
+                              if (product.price !== null && product.price !== undefined) {
+                                const numPrice = Number(product.price);
+                                return isNaN(numPrice) ? 'N/A' : <span className="tabular-nums">${numPrice.toFixed(2)}</span>;
+                              }
+                              return 'N/A';
+                            } catch (error) {
+                              console.error('Error formatting price:', error, product.price);
+                              return 'N/A';
+                            }
+                          })()
                         )}
                       </td>
-                                           <td className="table-cell">
+                    <td className="table-cell">
                         {(() => {
                           try {
                             // Convert discount_percent to number if it's a string
@@ -793,12 +945,12 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
                             
                             if (discountPercent !== null && discountPercent !== undefined && !isNaN(discountPercent) && discountPercent > 0) {
                               return (
-                                <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 font-medium">
+                                <span className="px-2 py-1 text-xs rounded-full bg-rose-50 text-rose-700 font-medium">
                                   -{discountPercent}%
                                 </span>
                               );
                             }
-                            return <span className="text-gray-400">No discount</span>;
+                            return <span className="text-gray-400">—</span>;
                           } catch (error) {
                             console.error('Error formatting discount:', error, product.discount_percent);
                             return <span className="text-gray-400">N/A</span>;
@@ -846,32 +998,29 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
                           }
                         })()}
                       </td>
-                     <td className="table-cell">
+                    <td className="table-cell">
                        <span className={`px-2 py-1 text-xs rounded-full ${
-                         product.status === 'active' ? 'bg-green-100 text-green-800' :
-                         product.status === 'inactive' ? 'bg-red-100 text-red-800' :
-                         'bg-gray-100 text-gray-800'
+                        product.status === 'active' ? 'bg-emerald-50 text-emerald-700' :
+                        product.status === 'inactive' ? 'bg-gray-100 text-gray-700' :
+                        'bg-gray-100 text-gray-700'
                        }`}>
-                         {product.status}
+                         {product.status === 'active' ? t('common.active') : t('common.inactive')}
                        </span>
                      </td>
                      <td className="table-cell text-sm text-gray-500">
                        {new Date(product.created_at).toLocaleDateString()}
                      </td>
-                     <td className="table-cell">
+                    <td className="table-cell">
                       <div className="flex items-center space-x-2">
-                        <button className="p-1 hover:bg-gray-100 rounded" title="Edit product">
-                          <Edit size={16} className="text-gray-500" />
-                        </button>
                         <button
                           onClick={() => openDiscountModal(product)}
                           className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
-                          title="Edit Discount"
+                          title={t('discount.edit')}
                         >
-                          Edit Discount
+                          {t('discount.edit')}
                         </button>
                       </div>
-                     </td>
+                    </td>
                    </tr>
                  ))
                )}
@@ -879,11 +1028,46 @@ const AllOffersPage: React.FC<AllOffersPageProps> = ({
           </table>
         </div>
 
-        {/* Pagination */}
+        {/* Bulk actions + Pagination */}
         <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-          <div className="text-sm text-gray-700">
-            Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} Results
+          <div className="flex items-center gap-3 text-sm text-gray-700">
+            <span>
+              {t('common.showing')} {startIndex + 1}–{Math.min(endIndex, totalItems)} {t('common.of')} {totalItems} {t('common.results')}
+            </span>
+            <label className="flex items-center gap-2">
+              <span className="text-gray-500">{t('common.perPage')}</span>
+              <select
+                className="border border-gray-300 rounded px-2 py-1 text-sm"
+                value={itemsPerPage}
+                onChange={(e) => { setItemsPerPage(parseInt(e.target.value) || 15); setCurrentPage(1); }}
+              >
+                <option value={10}>10</option>
+                <option value={15}>15</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </label>
           </div>
+          {showBulkActions && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-700">{selectedProducts.size} {t('common.selected')}</span>
+              <button
+                className="px-3 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700 disabled:opacity-50"
+                disabled={isBulkUpdating}
+                onClick={() => handleBulkStatusUpdate('active')}
+              >
+                {t('common.setActive')}
+              </button>
+              <button
+                className="px-3 py-1 rounded bg-gray-700 text-white text-sm hover:bg-gray-800 disabled:opacity-50"
+                disabled={isBulkUpdating}
+                onClick={() => handleBulkStatusUpdate('inactive')}
+              >
+                {t('common.setInactive')}
+              </button>
+            </div>
+          )}
           <div className="flex items-center space-x-2">
             <button 
               className={`p-2 rounded-lg ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}

@@ -49,6 +49,12 @@ header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
 header("X-Frame-Options: DENY");
+// Mild caching for GET endpoints; POST remains no-store
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+    header('Cache-Control: private, max-age=20, must-revalidate');
+} else {
+    header('Cache-Control: no-store');
+}
 // Only set HSTS on HTTPS in production
 if (!$isDev && ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'))) {
     header('Strict-Transport-Security: max-age=15552000; includeSubDomains');
@@ -123,9 +129,10 @@ try {
             $companyService = new \App\Services\CompanyService(new \App\Models\CompanyModel(), $authService, new \App\Models\BranchModel());
             $discountService = new \App\Services\DiscountService(new \App\Models\DiscountModel(), $authService, new \App\Models\CompanyModel());
             $analyticsService = new \App\Services\AnalyticsService(new \App\Models\AnalyticsModel(), $authService);
+            $categoryService = new \App\Services\CategoryService(new \App\Models\CategoryModel(), $authService);
 
             // Create the instance of the controller with the required dependencies
-            $controller = new $class($authService, $userService, $productService, $companyService, $discountService, $analyticsService);
+            $controller = new $class($authService, $userService, $productService, $companyService, $discountService, $analyticsService, $categoryService);
 
             // Call the action with the method
             $controller->$action($method);

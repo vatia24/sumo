@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, LineChart, Line, LabelList } from 'recharts';
 import { AnalyticsDemographicsBlock, AnalyticsTimeSeriesItem, AnalyticsActionCount } from '../services/api';
+import { useI18n } from '../i18n';
 
 interface AnalyticsChartsProps {
   demographics?: AnalyticsDemographicsBlock;
@@ -17,6 +18,7 @@ const COLORS = ['#3b82f6','#10b981','#f97316','#8b5cf6','#ef4444','#06b6d4','#84
 
 const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeseries, byAction, loading, activeTime, retention, timeseriesByAction }) => {
   const [activeTab, setActiveTab] = useState('trends');
+  const { t } = useI18n();
 
   const timeSeriesData = useMemo(() => {
     if (!timeseries) return [] as { date: string; total: number }[];
@@ -36,7 +38,7 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
 
   const deviceData = useMemo(() => {
     const items = demographics?.device || [];
-    return items.map((d, i) => ({ name: d.k || 'Unknown', value: d.total, color: COLORS[i % COLORS.length] }));
+    return items.map((d, i) => ({ name: d.k || t('analytics.unknown'), value: d.total, color: COLORS[i % COLORS.length] }));
   }, [demographics]);
 
   const ageData = useMemo(() => {
@@ -63,7 +65,7 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
 
   const locationData = useMemo(() => {
     const items = (demographics?.city || []).slice(0, 6);
-    return items.map((d, i) => ({ name: d.k || 'Unknown', value: d.total, color: COLORS[i % COLORS.length] }));
+    return items.map((d, i) => ({ name: d.k || t('analytics.unknown'), value: d.total, color: COLORS[i % COLORS.length] }));
   }, [demographics]);
 
   const totalActions = useMemo(() => {
@@ -71,11 +73,11 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
   }, [byAction]);
 
   const tabs = [
-    { id: 'devices', label: 'Devices' },
-    { id: 'trends', label: 'Trends' },
-    { id: 'demographics', label: 'Demographics' },
-    { id: 'active', label: 'Active Time' },
-    { id: 'retention', label: 'Retention' },
+    { id: 'devices', label: t('analytics.tabs.devices') },
+    { id: 'trends', label: t('analytics.tabs.trends') },
+    { id: 'demographics', label: t('analytics.tabs.demographics') },
+    { id: 'active', label: t('analytics.tabs.active') },
+    { id: 'retention', label: t('analytics.tabs.retention') },
   ];
 
   if (loading) {
@@ -109,7 +111,7 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
   if (isEmpty) {
     return (
       <div className="flex items-center justify-center py-16 text-sm text-gray-500">
-        No analytics data for the selected filters.
+        {t('analytics.noDataForFilters')}
       </div>
     );
   }
@@ -121,10 +123,10 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Devices</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('analytics.tabs.devices')}</h3>
                 <button className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900">
                   <Download size={16} />
-                  <span>Generate Report</span>
+                  <span>{t('analytics.generateReport')}</span>
                 </button>
               </div>
 
@@ -147,7 +149,7 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
                   </PieChart>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-900">Total</div>
+                      <div className="text-2xl font-bold text-gray-900">{t('analytics.total')}</div>
                       <div className="text-lg font-semibold text-gray-700">{totalActions}</div>
                     </div>
                   </div>
@@ -156,7 +158,7 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
 
               <div className="space-y-3">
                 {deviceData.length === 0 ? (
-                  <div className="text-sm text-gray-500">No device data</div>
+                  <div className="text-sm text-gray-500">{t('analytics.noDeviceData')}</div>
                 ) : deviceData.map((stat, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
@@ -177,13 +179,13 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
         return (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Performance Trends</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{t('analytics.performanceTrends')}</h3>
               <div />
             </div>
 
             {multiSeriesData.length === 0 ? (
               timeSeriesData.length === 0 ? (
-                <div className="h-64 flex items-center justify-center text-sm text-gray-500">No time series data</div>
+                <div className="h-64 flex items-center justify-center text-sm text-gray-500">{t('analytics.noTimeSeriesData')}</div>
               ) : (
                 <ResponsiveContainer width="100%" height={400}>
                   <AreaChart data={timeSeriesData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -215,15 +217,15 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
             <div className="grid grid-cols-3 gap-4 mt-6">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">{byAction?.find(a => a.action === 'view')?.total ?? 0}</div>
-                <div className="text-sm text-gray-600">Views</div>
+                <div className="text-sm text-gray-600">{t('analytics.metric.views')}</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">{byAction?.find(a => a.action === 'clicked')?.total ?? 0}</div>
-                <div className="text-sm text-gray-600">Clicks</div>
+                <div className="text-sm text-gray-600">{t('analytics.metric.clicks')}</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-600">{byAction?.find(a => a.action === 'redirect')?.total ?? 0}</div>
-                <div className="text-sm text-gray-600">Redirects</div>
+                <div className="text-sm text-gray-600">{t('analytics.metric.redirects')}</div>
               </div>
             </div>
           </div>
@@ -234,7 +236,7 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Age Distribution</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('analytics.ageDistribution')}</h3>
                 <div className="flex items-center space-x-2">
                   <div className="flex bg-gray-100 rounded-md p-1">
                     <button onClick={() => setAgeMetric('percent')} className={`px-2 py-1 text-xs rounded ${ageMetric === 'percent' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'}`}>%</button>
@@ -242,21 +244,21 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
                   </div>
                   <button className="hidden md:flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900">
                     <Download size={16} />
-                    <span>Export</span>
+                    <span>{t('analytics.export')}</span>
                   </button>
                 </div>
               </div>
 
               {ageData.length === 0 ? (
-                <div className="h-64 flex items-center justify-center text-sm text-gray-500">No age data</div>
+                <div className="h-64 flex items-center justify-center text-sm text-gray-500">{t('analytics.noAgeData')}</div>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={ageData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" tickFormatter={(v) => ageMetric === 'percent' ? `${v}%` : `${v}`} domain={[0, 'auto']} />
                     <YAxis dataKey="age" type="category" width={70} />
-                    <Tooltip formatter={(value: any, name) => {
-                      return ageMetric === 'percent' ? [`${value}%`, 'Percentage'] : [value, 'Users'];
+                    <Tooltip formatter={(value: any) => {
+                      return ageMetric === 'percent' ? [`${value}%`, t('analytics.percentage')] : [value, t('analytics.users')];
                     }} />
                     <Bar dataKey={ageMetric === 'percent' ? 'pct' : 'value'} fill="#3b82f6" radius={[0, 4, 4, 0]}>
                       <LabelList dataKey={ageMetric === 'percent' ? 'pct' : 'value'} position="right" formatter={(v: any) => ageMetric === 'percent' ? `${v}%` : v} className="text-xs fill-gray-700" />
@@ -268,11 +270,11 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Geographic Distribution</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('analytics.geoDistribution')}</h3>
               </div>
 
               {locationData.length === 0 ? (
-                <div className="h-64 flex items-center justify-center text-sm text-gray-500">No location data</div>
+                <div className="h-64 flex items-center justify-center text-sm text-gray-500">{t('analytics.noLocationData')}</div>
               ) : (
                 <div className="flex items-center justify-center mb-6">
                   <PieChart width={200} height={200}>
@@ -295,7 +297,7 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
 
               <div className="space-y-2">
                 {locationData.length === 0 ? (
-                  <div className="text-sm text-gray-500">No location breakdown</div>
+                  <div className="text-sm text-gray-500">{t('analytics.noLocationBreakdown')}</div>
                 ) : locationData.map((item, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
@@ -315,10 +317,10 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">By Hour of Day</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('analytics.byHour')}</h3>
               </div>
               {(!activeTime || activeTime.by_hour.length === 0) ? (
-                <div className="h-64 flex items-center justify-center text-sm text-gray-500">No hourly data</div>
+                <div className="h-64 flex items-center justify-center text-sm text-gray-500">{t('analytics.noHourlyData')}</div>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={activeTime.by_hour.map(h => ({ hour: h.h, total: h.total }))}>
@@ -334,10 +336,10 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">By Day of Week</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('analytics.byDayOfWeek')}</h3>
               </div>
               {(!activeTime || activeTime.by_dow.length === 0) ? (
-                <div className="h-64 flex items-center justify-center text-sm text-gray-500">No day-of-week data</div>
+                <div className="h-64 flex items-center justify-center text-sm text-gray-500">{t('analytics.noDowData')}</div>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={activeTime.by_dow.map(d => ({ dow: d.dow, total: d.total }))}>
@@ -357,23 +359,23 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ demographics, timeser
         return (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Retention</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{t('analytics.retention')}</h3>
             </div>
             {!retention ? (
-              <div className="h-32 flex items-center justify-center text-sm text-gray-500">No retention data</div>
+              <div className="h-32 flex items-center justify-center text-sm text-gray-500">{t('analytics.noRetentionData')}</div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-900">{retention.unique_users}</div>
-                  <div className="text-sm text-gray-600">Unique users</div>
+                  <div className="text-sm text-gray-600">{t('analytics.uniqueUsers')}</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-900">{retention.returning_users}</div>
-                  <div className="text-sm text-gray-600">Returning users</div>
+                  <div className="text-sm text-gray-600">{t('analytics.returningUsers')}</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-900">{retention.retention_rate !== null ? `${(retention.retention_rate*100).toFixed(1)}%` : '—'}</div>
-                  <div className="text-sm text-gray-600">Retention rate</div>
+                  <div className="text-sm text-gray-600">{t('analytics.retentionRate')}</div>
                 </div>
               </div>
             )}

@@ -46,13 +46,42 @@ const AddOfferPage: React.FC<AddOfferPageProps> = ({ onBack, onProductCreated })
     }
   }, [company]);
 
-  const categories = ['Electronics', 'Clothing', 'Home & Garden', 'Sports', 'Books', 'Toys'];
-  const subcategories = ['Smartphones', 'Laptops', 'Accessories', 'Men', 'Women', 'Kids'];
+  const [categories, setCategories] = useState<{ id: number; name: string; slug: string; parent_id?: number; image_path?: string }[]>([]);
+  const [subcategories, setSubcategories] = useState<{ id: number; name: string; slug: string; parent_id?: number; image_path?: string }[]>([]);
   const locations = ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia'];
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiService.listCategories({ parent_id: null, limit: 200 });
+        if (!cancelled) setCategories(res.categories);
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!formData.category) { setSubcategories([]); return; }
+      const root = categories.find(c => String(c.id) === String(formData.category) || c.slug === formData.category || c.name === formData.category);
+      if (!root) { setSubcategories([]); return; }
+      try {
+        const res = await apiService.listCategories({ parent_id: root.id, limit: 200 });
+        if (!cancelled) setSubcategories(res.categories);
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [formData.category, categories]);
 
   const handleFileUpload = (files: FileList | null) => {
     if (files) {
@@ -118,6 +147,14 @@ const AddOfferPage: React.FC<AddOfferPageProps> = ({ onBack, onProductCreated })
       // Create the product
       const createdProduct = await apiService.upsertProduct(productData);
       console.log('Product created:', createdProduct);
+
+      // Assign categories if selected
+      const catIds: number[] = [];
+      if (formData.category) catIds.push(Number(formData.category));
+      if (formData.subcategory) catIds.push(Number(formData.subcategory));
+      if (catIds.length > 0 && createdProduct?.id) {
+        try { await apiService.setProductCategories(createdProduct.id, catIds); } catch {}
+      }
 
       // If there's a discount, create it
       if (parseFloat(formData.discountPercentage) > 0) {
@@ -250,7 +287,7 @@ const AddOfferPage: React.FC<AddOfferPageProps> = ({ onBack, onProductCreated })
                 >
                   <option value="">Select Category</option>
                   {categories.map((category) => (
-                    <option key={category} value={category}>{category}</option>
+                    <option key={category.id} value={String(category.id)}>{category.name}</option>
                   ))}
                 </select>
                 <ChevronDown size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -269,7 +306,7 @@ const AddOfferPage: React.FC<AddOfferPageProps> = ({ onBack, onProductCreated })
                 >
                   <option value="">Select Category</option>
                   {subcategories.map((subcategory) => (
-                    <option key={subcategory} value={subcategory}>{subcategory}</option>
+                    <option key={subcategory.id} value={String(subcategory.id)}>{subcategory.name}</option>
                   ))}
                 </select>
                 <ChevronDown size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />

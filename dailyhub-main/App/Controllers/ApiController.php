@@ -11,6 +11,7 @@ use App\Helpers\ResponseHelper;
 use App\Services\CompanyService;
 use App\Services\DiscountService;
 use App\Services\AnalyticsService;
+use App\Services\CategoryService;
 
 class ApiController
 {
@@ -20,8 +21,9 @@ class ApiController
     private CompanyService $companyService;
     private DiscountService $discountService;
     private AnalyticsService $analyticsService;
+    private CategoryService $categoryService;
 
-    public function __construct(AuthService $authService, UserService $userService, ProductService $productService, CompanyService $companyService, DiscountService $discountService, AnalyticsService $analyticsService)
+    public function __construct(AuthService $authService, UserService $userService, ProductService $productService, CompanyService $companyService, DiscountService $discountService, AnalyticsService $analyticsService, CategoryService $categoryService)
     {
         $this->authService = $authService;
         $this->userService = $userService;
@@ -29,6 +31,7 @@ class ApiController
         $this->companyService = $companyService;
         $this->discountService = $discountService;
         $this->analyticsService = $analyticsService;
+        $this->categoryService = $categoryService;
     }
 
     public function handleRequest(string $method): void
@@ -70,6 +73,8 @@ class ApiController
     private function getMethodMap(): array
     {
         return [
+            // Health
+            'health'                    => function (): array { return ['status' => 'ok']; },
             // Auth: login + account lifecycle
             // POST /api/authorize { identifier, password }
             'authorize'                 => [$this->authService, 'authorize'],
@@ -89,6 +94,8 @@ class ApiController
             'googleAuth'                => [$this->authService, 'googleAuth'],
             // Token refresh (POST)
             'refresh'                   => [$this->authService, 'refresh'],
+            // Current authenticated user (GET /api/me)
+            'me'                        => [$this->authService, 'currentUser'],
 
             // Products: read-only quick list with discounts (legacy)
             // GET /api/getProducts[?id=]
@@ -113,6 +120,20 @@ class ApiController
             'listProductImages'         => [$this->productService, 'listImages'],
             // POST /api/deleteProductImage { image_id }
             'deleteProductImage'        => [$this->productService, 'deleteImage'],
+
+            // Categories
+            // GET /api/listCategories?parent_id&q&limit&offset
+            'listCategories'            => [$this->categoryService, 'list'],
+            // POST /api/upsertCategory { id?, name, slug?, parent_id?, image_path? }
+            'upsertCategory'            => [$this->categoryService, 'upsert'],
+            // POST /api/deleteCategory { id }
+            'deleteCategory'            => [$this->categoryService, 'delete'],
+            // POST /api/uploadCategoryImage { id, file_base64 }
+            'uploadCategoryImage'       => [$this->categoryService, 'uploadImage'],
+            // GET /api/listProductCategories?product_id
+            'listProductCategories'     => [$this->categoryService, 'listProductCategories'],
+            // POST /api/setProductCategories { product_id, category_ids: [] }
+            'setProductCategories'      => [$this->categoryService, 'setProductCategories'],
 
             // Company: profile + RBAC
             // POST /api/upsertCompany { id?, full_name, address, ... }

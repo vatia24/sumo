@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, Download, Filter, TrendingUp, TrendingDown, Eye, MousePointer, Smartphone, Monitor, MapPin, Share2, Heart, ExternalLink, ThumbsDown } from 'lucide-react';
 import AnalyticsCharts from './AnalyticsCharts';
 import { apiService, AnalyticsSummaryResponse, CompanyAnalyticsTotals, Discount } from '../services/api';
+import { useI18n } from '../i18n';
 import { useCompany } from '../contexts/CompanyContext';
 
 const AnalyticsPage: React.FC = () => {
   const { company, refreshCompany } = useCompany();
+  const { t } = useI18n();
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [selectedMetric, setSelectedMetric] = useState('all');
   const [fromDate, setFromDate] = useState<string | undefined>(undefined);
@@ -136,26 +138,26 @@ const AnalyticsPage: React.FC = () => {
   const handleExport = () => {
     // Build CSV from live data
     const lines: string[] = [];
-    lines.push('Metric,Value');
+    lines.push('მეტრიკა,მნიშვნელობა');
     if (companyTotals) {
-      lines.push(`Views,${companyTotals.total_views}`);
-      lines.push(`Clicks,${companyTotals.total_clicks}`);
-      lines.push(`Redirects,${companyTotals.total_redirects}`);
+      lines.push(`ნახვები,${companyTotals.total_views}`);
+      lines.push(`კლიკები,${companyTotals.total_clicks}`);
+      lines.push(`გადამისამართებები,${companyTotals.total_redirects}`);
       lines.push(`CTR,${companyTotals.ctr !== null ? (companyTotals.ctr * 100).toFixed(2) + '%"' : '—'}`);
     }
     if (summary) {
       lines.push('');
-      lines.push('Action,Total');
+      lines.push('ქმედება,სულ');
       summary.summary.by_action.forEach(a => lines.push(`${a.action},${a.total}`));
       lines.push('');
-      lines.push('Timeseries Date,Total');
+      lines.push('თარიღი,სულ');
       summary.timeseries.forEach(t => lines.push(`${t.d},${t.total}`));
     }
     const csvContent = 'data:text/csv;charset=utf-8,' + lines.join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `analytics-${selectedPeriod}.csv`);
+    link.setAttribute("download", `ანალიტიკა-${selectedPeriod}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -165,7 +167,7 @@ const AnalyticsPage: React.FC = () => {
     const totals = companyTotals;
     return [
       {
-        title: 'Views',
+        title: 'ნახვები',
         value: totals ? totals.total_views.toLocaleString() : '—',
         change: '',
         trend: 'up',
@@ -173,7 +175,7 @@ const AnalyticsPage: React.FC = () => {
         color: 'bg-blue-500'
       },
       {
-        title: 'Clicks',
+        title: 'კლიკები',
         value: totals ? totals.total_clicks.toLocaleString() : '—',
         change: '',
         trend: 'up',
@@ -181,7 +183,7 @@ const AnalyticsPage: React.FC = () => {
         color: 'bg-purple-500'
       },
       {
-        title: 'Redirects',
+        title: 'გადამისამართებები',
         value: totals ? totals.total_redirects.toLocaleString() : '—',
         change: '',
         trend: 'up',
@@ -202,7 +204,7 @@ const AnalyticsPage: React.FC = () => {
   const deviceBreakdown = useMemo(() => {
     const items = summary?.demographics.device || [];
     const total = items.reduce((s, i) => s + i.total, 0) || 1;
-    return items.map(i => ({ device: i.k || 'Unknown', percentage: Math.round((i.total / total) * 100), users: i.total.toLocaleString(), change: '' }));
+    return items.map(i => ({ device: i.k || 'უცნობი', percentage: Math.round((i.total / total) * 100), users: i.total.toLocaleString(), change: '' }));
   }, [summary]);
 
   const [top, setTop] = useState<{ discount_id: number; total: number }[] | null>(null);
@@ -242,8 +244,8 @@ const AnalyticsPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">ანალიტიკა</h1>
-          <p className="text-gray-600 mt-1">Track your performance and user behavior</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('analytics.title')}</h1>
+          <p className="text-gray-600 mt-1">{t('analytics.subtitle')}</p>
         </div>
         <div className="flex items-center space-x-3 mt-4 sm:mt-0">
           <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
@@ -253,11 +255,11 @@ const AnalyticsPage: React.FC = () => {
               onChange={(e) => setSelectedPeriod(e.target.value)}
               className="text-sm border-none focus:ring-0"
             >
-              <option value="all">All time</option>
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="90d">Last 90 days</option>
-              <option value="1y">Last year</option>
+              <option value="all">{t('analytics.period.all')}</option>
+              <option value="7d">{t('analytics.period.7d')}</option>
+              <option value="30d">{t('analytics.period.30d')}</option>
+              <option value="90d">{t('analytics.period.90d')}</option>
+              <option value="1y">{t('analytics.period.1y')}</option>
             </select>
           </div>
           <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
@@ -267,10 +269,10 @@ const AnalyticsPage: React.FC = () => {
               onChange={(e) => setSelectedDiscountId(e.target.value ? Number(e.target.value) : undefined)}
               className="text-sm border-none focus:ring-0"
             >
-              <option value="">All discounts</option>
+              <option value="">{t('analytics.allDiscounts')}</option>
               {discounts.map(d => {
                 const title = (d as any).title;
-                const label = title && title.trim().length > 0 ? title : (d.product_id ? (productNames[d.product_id] || `Discount #${d.id}`) : `Discount #${d.id}`);
+                const label = title && title.trim().length > 0 ? title : (d.product_id ? (productNames[d.product_id] || `შეთავაზება #${d.id}`) : `შეთავაზება #${d.id}`);
                 return (
                   <option key={d.id} value={d.id}>{label}</option>
                 );
@@ -278,26 +280,26 @@ const AnalyticsPage: React.FC = () => {
             </select>
           </div>
           <div className="hidden md:flex items-center space-x-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-            <span className="text-xs text-gray-500">Device</span>
+            <span className="text-xs text-gray-500">{t('analytics.device')}</span>
             <select value={deviceType} onChange={(e) => setDeviceType(e.target.value)} className="text-sm border-none focus:ring-0">
-              <option value="">All</option>
-              <option value="Mobile">Mobile</option>
-              <option value="Desktop">Desktop</option>
-              <option value="Tablet">Tablet</option>
+              <option value="">ყველა</option>
+              <option value="Mobile">მობილური</option>
+              <option value="Desktop">დესკტოპი</option>
+              <option value="Tablet">ტაბლეტი</option>
             </select>
           </div>
           <div className="hidden md:flex items-center space-x-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-            <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="text-sm border-none focus:ring-0 placeholder-gray-400" />
+            <input value={city} onChange={(e) => setCity(e.target.value)} placeholder={t('analytics.city')} className="text-sm border-none focus:ring-0 placeholder-gray-400" />
           </div>
           <div className="hidden md:flex items-center space-x-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-            <input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="Region" className="text-sm border-none focus:ring-0 placeholder-gray-400" />
+            <input value={region} onChange={(e) => setRegion(e.target.value)} placeholder={t('analytics.region')} className="text-sm border-none focus:ring-0 placeholder-gray-400" />
           </div>
           <button 
             onClick={handleExport}
             className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Download size={16} />
-            <span>Export</span>
+            <span>{t('analytics.export')}</span>
           </button>
         </div>
       </div>
@@ -320,7 +322,7 @@ const AnalyticsPage: React.FC = () => {
                 {stat.trend === 'up' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                 <span className="ml-1">{stat.change}</span>
               </div>
-              <span className="text-sm text-gray-500 ml-2">vs last period</span>
+              <span className="text-sm text-gray-500 ml-2">წინა პერიოდთან შედარებით</span>
             </div>
           </div>
         ))}
@@ -328,8 +330,8 @@ const AnalyticsPage: React.FC = () => {
 
       {/* Charts Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">Performance Charts</h2>
+          <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900">{t('analytics.performanceCharts')}</h2>
           <div />
         </div>
         {error && (
@@ -349,15 +351,15 @@ const AnalyticsPage: React.FC = () => {
       {/* Interactions Breakdown (selected discount) */}
       {selectedDiscountId && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Discount Interactions</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">შეთავაზების ინტერაქციები</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
-              { key: 'view', label: 'Impressions', icon: Eye, color: 'text-blue-600' },
-              { key: 'clicked', label: 'Clicks', icon: MousePointer, color: 'text-green-600' },
-              { key: 'redirect', label: 'Outbound', icon: ExternalLink, color: 'text-orange-600' },
-              { key: 'map_open', label: 'Address views', icon: MapPin, color: 'text-purple-600' },
-              { key: 'share', label: 'Shares', icon: Share2, color: 'text-cyan-600' },
-              { key: 'favorite', label: 'Favorites', icon: Heart, color: 'text-rose-600' },
+              { key: 'view', label: 'დათვალიერებები', icon: Eye, color: 'text-blue-600' },
+              { key: 'clicked', label: 'კლიკები', icon: MousePointer, color: 'text-green-600' },
+              { key: 'redirect', label: 'გადამისამართებები', icon: ExternalLink, color: 'text-orange-600' },
+              { key: 'map_open', label: 'მისამართის ნახვები', icon: MapPin, color: 'text-purple-600' },
+              { key: 'share', label: 'გაზიარებები', icon: Share2, color: 'text-cyan-600' },
+              { key: 'favorite', label: 'შენახვები', icon: Heart, color: 'text-rose-600' },
             ].map((m, idx) => {
               const total = summary?.summary.by_action.find(a => a.action === m.key)?.total ?? 0;
               return (
@@ -378,7 +380,7 @@ const AnalyticsPage: React.FC = () => {
                   <div className="rounded-lg border border-gray-100 p-4">
                     <div className="flex items-center space-x-2 text-sm text-gray-500">
                       <ThumbsDown size={16} className="text-gray-600" />
-                      <span>Not interested</span>
+                      <span>არ დაინტერესებულები</span>
                     </div>
                     <div className="text-2xl font-semibold text-gray-900 mt-1">{ni.toLocaleString()}</div>
                   </div>
@@ -394,11 +396,11 @@ const AnalyticsPage: React.FC = () => {
               <div className="text-2xl font-semibold text-gray-900 mt-1">{(summary && summary.summary.ctr !== null) ? `${(summary.summary.ctr*100).toFixed(2)}%` : '—'}</div>
             </div>
             <div className="rounded-lg border border-gray-100 p-4">
-              <div className="text-sm text-gray-500">Store visits (proxy)</div>
+              <div className="text-sm text-gray-500">ფილიალის ვიზიტები (პროქსი)</div>
               <div className="text-2xl font-semibold text-gray-900 mt-1">{(summary?.summary.by_action.find(a => a.action === 'map_open')?.total ?? 0).toLocaleString()}</div>
             </div>
             <div className="rounded-lg border border-gray-100 p-4">
-              <div className="text-sm text-gray-500">Outbound clicks</div>
+              <div className="text-sm text-gray-500">გადამისამართების კლიკები</div>
               <div className="text-2xl font-semibold text-gray-900 mt-1">{(summary?.summary.by_action.find(a => a.action === 'redirect')?.total ?? 0).toLocaleString()}</div>
             </div>
           </div>
@@ -408,7 +410,7 @@ const AnalyticsPage: React.FC = () => {
       {/* Device Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Device Breakdown</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">მოწყობილობების განაწილება</h3>
           <div className="space-y-4">
             {deviceBreakdown.map((device, index) => (
               <div key={index} className="flex items-center justify-between">
@@ -437,28 +439,28 @@ const AnalyticsPage: React.FC = () => {
         {/* Top Discounts */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Top Discounts</h3>
+            <h3 className="text-lg font-semibold text-gray-900">ტოპ შეთავაზებები</h3>
             <select value={topMetric} onChange={(e) => setTopMetric(e.target.value as any)} className="text-sm border border-gray-200 rounded-md px-2 py-1">
-              <option value="view">By Views</option>
-              <option value="clicked">By Clicks</option>
-              <option value="redirect">By Outbound</option>
-              <option value="map_open">By Address Views</option>
-              <option value="share">By Shares</option>
-              <option value="favorite">By Favorites</option>
-              <option value="not_interested">Not Interested</option>
+              <option value="view">ნახვებით</option>
+              <option value="clicked">კლიკებით</option>
+              <option value="redirect">გადამისამართებებით</option>
+              <option value="map_open">მისამართის ნახვებით</option>
+              <option value="share">გაზიარებებით</option>
+              <option value="favorite">შენახვებით</option>
+              <option value="not_interested">არ დაინტერესებულები</option>
             </select>
           </div>
           <div className="space-y-4">
             {top?.map((item, index) => (
               <div key={index} className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{discountNameById[item.discount_id] || `Discount #${item.discount_id}`}</p>
+                  <p className="text-sm font-medium text-gray-900 truncate">{discountNameById[item.discount_id] || `შეთავაზება #${item.discount_id}`}</p>
                 </div>
                 <div className="text-sm text-gray-600">{item.total.toLocaleString()}</div>
               </div>
             ))}
             {!top && (
-              <div className="text-sm text-gray-500">No data</div>
+              <div className="text-sm text-gray-500">მონაცემები არ არის</div>
             )}
           </div>
         </div>
@@ -479,19 +481,19 @@ const AnalyticsPage: React.FC = () => {
 
       {/* Real-time Activity */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Real-time Activity</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">რეალურ დროში აქტივობა</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">{realTimeData.activeUsers.toLocaleString()}</div>
-            <div className="text-sm text-gray-600">Active users now</div>
+            <div className="text-sm text-gray-600">აქტიური მომხმარებლები</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">{realTimeData.pagesViewed}</div>
-            <div className="text-sm text-gray-600">Pages viewed/min</div>
+            <div className="text-sm text-gray-600">გვერდები/წუთში</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-purple-600">{realTimeData.conversions}</div>
-            <div className="text-sm text-gray-600">Conversions today</div>
+            <div className="text-sm text-gray-600">დღევანდელი კონვერსიები</div>
           </div>
         </div>
       </div>
@@ -529,7 +531,7 @@ const BenchmarkBanner: React.FC<{ companyId?: number; discountClicks: number; fr
     <div className={`rounded-xl border ${up ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'} p-4`}> 
       <div className="flex items-center justify-between">
         <div className="text-sm text-gray-800">
-          {up ? 'Great job!' : 'Opportunity to improve:'} Your discount received <span className="font-semibold">{Math.abs(diff).toFixed(0)}%</span> {up ? 'more' : 'less'} clicks than the company average.
+          {up ? 'კარგი მუშაობაა!' : 'გაუმჯობესების შესაძლებლობა:'} თქვენს შეთავაზებას აქვს <span className="font-semibold">{Math.abs(diff).toFixed(0)}%</span> {up ? 'მეტ' : 'ნაკლებ'} კლიკი კომპანიის საშუალო მაჩვენებელთან შედარებით.
         </div>
       </div>
     </div>

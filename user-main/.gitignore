@@ -1,0 +1,7 @@
+vendor/
+.env
+storage/logs/*.log
+.phpunit.cache
+composer.lock
+storage/ratelimit/
+

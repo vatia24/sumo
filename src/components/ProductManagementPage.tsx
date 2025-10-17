@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useI18n } from '../i18n';
 import { 
   Plus, 
   Trash2, 
@@ -42,6 +43,7 @@ interface ProductManagementPageProps {
   error?: string | null;
   onRefresh?: () => void;
   autoEditProductId?: number | null;
+  embedded?: boolean;
 }
 
 const ProductManagementPage: React.FC<ProductManagementPageProps> = ({ 
@@ -52,13 +54,17 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
   error: propError = null, 
   onRefresh,
   autoEditProductId = null,
+  embedded = false,
 }) => {
+  const { t } = useI18n();
   // Use local state as fallback if props are not provided
   const [products, setProducts] = useState<Product[]>(propProducts);
   const [loading, setLoading] = useState(propLoading);
   const [error, setError] = useState<string | null>(propError);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(15);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [selectedProducts, setSelectedProducts] = useState<Set<number>>(new Set());
   const [bulkAction, setBulkAction] = useState<'active' | 'inactive'>('active');
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
@@ -374,13 +380,22 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
     }
   };
 
-  // Pagination
-  const totalPages = Math.ceil(products.length / itemsPerPage);
+  // Filtering + Pagination
+  const filteredProducts = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return products.filter(p => {
+      if (q && !(`${p.name || ''} ${p.description || ''}`.toLowerCase().includes(q))) return false;
+      if (statusFilter !== 'all' && p.status !== statusFilter) return false;
+      return true;
+    });
+  }, [products, search, statusFilter]);
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentProducts = products.slice(startIndex, endIndex);
+  const currentProducts = filteredProducts.slice(startIndex, endIndex);
 
-  if (loading) {
+  if (!embedded && loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
@@ -389,24 +404,36 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className={embedded ? '' : ''}>
+      <div className={embedded ? '' : ''}>
         {/* Header */}
+        {!embedded && (
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
-                      <h1 className="text-2xl font-bold text-gray-900">პროდუქტის მართვა</h1>
-        <p className="text-gray-600 mt-1">Manage your products, images, and bulk operations</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('products.title')}</h1>
+              <p className="text-gray-600 mt-1">{t('products.subtitle')}</p>
             </div>
-            <button
-              onClick={onAddNew}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            >
-              <Plus className="h-5 w-5" />
-              Add Product
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                className="input w-56"
+                placeholder={t('common.searchByName')}
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+              />
+              <div className="flex items-center gap-1 text-sm text-gray-700" role="tablist" aria-label="Status filter">
+                <button role="tab" aria-selected={statusFilter==='all'} className={`px-2 py-1 rounded ${statusFilter==='all'?'bg-gray-200':'hover:bg-gray-100'}`} onClick={() => { setStatusFilter('all'); setCurrentPage(1); }}>{t('common.all')}</button>
+                <button role="tab" aria-selected={statusFilter==='active'} className={`px-2 py-1 rounded ${statusFilter==='active'?'bg-emerald-50 text-emerald-700':'hover:bg-gray-100'}`} onClick={() => { setStatusFilter('active'); setCurrentPage(1); }}>{t('common.active')}</button>
+                <button role="tab" aria-selected={statusFilter==='inactive'} className={`px-2 py-1 rounded ${statusFilter==='inactive'?'bg-gray-100 text-gray-700':'hover:bg-gray-100'}`} onClick={() => { setStatusFilter('inactive'); setCurrentPage(1); }}>{t('common.inactive')}</button>
+              </div>
+              <button onClick={onAddNew} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                <Plus className="h-5 w-5" />
+                {t('common.addProduct')}
+              </button>
+            </div>
           </div>
         </div>
+        )}
 
         {/* Error Display */}
         {error && (
@@ -415,45 +442,12 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
           </div>
         )}
 
-        {/* Bulk Operations */}
-        {selectedProducts.size > 0 && (
-          <div className="bg-white rounded-lg shadow-sm p-4 mb-6 border border-blue-200">
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-medium text-gray-700">
-                {selectedProducts.size} product(s) selected
-              </span>
-              <select
-                value={bulkAction}
-                onChange={(e) => setBulkAction(e.target.value as 'active' | 'inactive')}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm"
-              >
-                <option value="active">Set Active</option>
-                <option value="inactive">Set Inactive</option>
-              </select>
-              <button
-                onClick={handleBulkStatusUpdate}
-                disabled={isBulkUpdating}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-              >
-                {isBulkUpdating ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  'Update Status'
-                )}
-              </button>
-              <button
-                onClick={() => setSelectedProducts(new Set())}
-                className="text-gray-600 hover:text-gray-800"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Bulk operations UI removed to match main table */}
 
-        {/* Products Table */}
+        {/* Products Table (hidden in embedded edit mode) */}
+        {!embedded && (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-auto max-h-[60vh] min-h-[60vh] stable-scroll">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -470,24 +464,11 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
                       Select All
                     </button>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ფასი
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    სტატუსი
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Discount
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Company
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    შექმნის თარიღი
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     ქმედებები
                   </th>
@@ -500,6 +481,7 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
                       <button
                         onClick={() => handleSelectProduct(product.id)}
                         className="flex items-center gap-2 hover:text-gray-700"
+                        aria-label={`Select ${product.name}`}
                       >
                         {selectedProducts.has(product.id) ? (
                           <CheckSquare className="h-4 w-4 text-blue-600" />
@@ -509,62 +491,24 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
                       </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        {product.primary_image_url && (
-                          <img
-                            className="h-10 w-10 rounded-lg object-cover mr-3"
-                            src={getProductListThumbUrl(product.primary_image_url as string)}
-                            alt={product.name}
-                          />
-                        )}
+                      <div className="flex items-center gap-3 min-w-[220px]">
+                        <div className="h-10 w-10 rounded-lg overflow-hidden bg-gray-100 text-gray-500 flex items-center justify-center">
+                          {product.primary_image_url ? (
+                            <img className="h-full w-full object-cover" src={getProductListThumbUrl(product.primary_image_url as string)} alt={product.name || 'Product'} />
+                          ) : (
+                            <span className="text-sm font-medium">{(product.name || 'NA').split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase()}</span>
+                          )}
+                        </div>
                         <div>
                           <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                          {product.description && (
-                            <div className="text-sm text-gray-500">{product.description}</div>
-                          )}
+                          {(() => { let dp: any = (product as any).discount_percent; if (typeof dp === 'string') dp = parseFloat(dp); if (dp && !isNaN(dp) && dp > 0) { return <div className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-rose-50 text-rose-700 mt-0.5">-{dp}%</div>; } return null; })()}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {product.effective_price ? (
-                          <span className="text-green-600 font-medium">
-                            ${formatPrice(product.effective_price)}
-                          </span>
-                        ) : (
-                          <span>${formatPrice(product.price)}</span>
-                        )}
-                      </div>
-                      {product.discount_percent ? (
-                        <div className="text-xs text-gray-500">{product.discount_percent}% off</div>
-                      ) : (
-                        <div className="text-xs text-red-600">No discount</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        product.status === 'active' 
-                          ? 'bg-green-100 text-green-800' 
-                          : product.status === 'inactive'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {product.status === 'active' ? 'აქტიური' : product.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {product.discount_percent && product.discount_status === 'active' ? (
-                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Active</span>
-                      ) : (
-                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Missing</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {product.company_id}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(product.created_at).toLocaleDateString()}
-                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 max-w-xs truncate">{product.description || 'No description'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">{(() => { const effective = Number(product.effective_price); const price = Number(product.price); const hasDiscount = !isNaN(effective) && effective > 0; if (hasDiscount) { return <span className="text-green-600 font-semibold tabular-nums">${formatPrice(effective)}</span>; } return <span className="tabular-nums">${formatPrice(price)}</span>; })()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap"><span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${product.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-700'}`}>{product.status}</span></td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right tabular-nums">{new Date(product.created_at).toLocaleDateString()}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
                         <button
@@ -599,13 +543,14 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
             </table>
           </div>
         </div>
+        )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
+        {/* Pagination (hidden in embedded edit mode) */}
+        {!embedded && totalPages > 1 && (
           <div className="bg-white rounded-lg shadow-sm p-4 mt-6">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-700">
-                Showing {startIndex + 1} to {Math.min(endIndex, products.length)} of {products.length} results
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredProducts.length)} of {filteredProducts.length} results
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -720,10 +665,10 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = ({
         </div>
       )}
 
-      {/* Edit Product Modal */}
-      {editModalOpen && editingProduct && editForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full mx-4">
+      {/* Edit Product UI: modal for standalone; inline card for embedded */}
+      {((embedded && editingProduct && editForm) || (editModalOpen && editingProduct && editForm)) && (
+        <div className={embedded ? '' : 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'}>
+          <div className={embedded ? 'bg-white rounded-lg max-w-2xl w-full mx-auto' : 'bg-white rounded-lg max-w-2xl w-full mx-4'}>
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900">Edit Product #{editingProduct.id}</h2>
               <button onClick={closeEditModal} className="text-gray-400 hover:text-gray-600">

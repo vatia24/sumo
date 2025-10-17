@@ -9,6 +9,10 @@ class AnalyticsService
 {
     private AnalyticsModel $analyticsModel;
     private AuthService $authService;
+    /**
+     * Small in-process cache TTL seconds. Use APCu if available; otherwise no-op.
+     */
+    private int $cacheTtl = 20;
 
     public function __construct(AnalyticsModel $analyticsModel, AuthService $authService)
     {
@@ -46,6 +50,12 @@ class AnalyticsService
     public function summary(array $data): array
     {
         $this->authService->authorizeRequest();
+        // Micro-cache: cache key depends on route + params
+        $cacheKey = $this->buildCacheKey('analytics_summary', $data);
+        $cached = $this->cacheGet($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
         // If discount_id missing but company_id provided, aggregate company-wide
         if (empty($data['discount_id']) && !empty($data['company_id'])) {
             $companyId = (int)$data['company_id'];
@@ -58,7 +68,7 @@ class AnalyticsService
                 'age_group' => $data['age_group'] ?? null,
                 'gender' => $data['gender'] ?? null,
             ];
-            return [
+            $resp = [
                 'summary' => $this->analyticsModel->companySummary($companyId, $filters),
                 'demographics' => $this->analyticsModel->companyDemographics($companyId, $filters),
                 'timeseries' => $this->analyticsModel->companyTimeSeries($companyId, $filters, $data['granularity'] ?? 'day'),
@@ -66,6 +76,8 @@ class AnalyticsService
                 'active_time' => $this->analyticsModel->companyActiveTime($companyId, $filters),
                 'retention' => $this->analyticsModel->companyRetention($companyId, $filters),
             ];
+            $this->cacheSet($cacheKey, $resp);
+            return $resp;
         }
         $id = (int)($data['discount_id'] ?? 0);
         $filters = [
@@ -77,7 +89,7 @@ class AnalyticsService
             'age_group' => $data['age_group'] ?? null,
             'gender' => $data['gender'] ?? null,
         ];
-        return [
+        $resp = [
             'summary' => $this->analyticsModel->summaryByDiscount($id, $filters),
             'demographics' => $this->analyticsModel->demographics($id, $filters),
             'timeseries' => $this->analyticsModel->timeSeries($id, $filters, $data['granularity'] ?? 'day'),
@@ -85,6 +97,8 @@ class AnalyticsService
             'active_time' => $this->analyticsModel->activeTime($id, $filters),
             'retention' => $this->analyticsModel->retention($id, $filters),
         ];
+        $this->cacheSet($cacheKey, $resp);
+        return $resp;
     }
 
     /**
@@ -105,7 +119,14 @@ class AnalyticsService
             'gender' => $data['gender'] ?? null,
             'company_id' => isset($data['company_id']) ? (int)$data['company_id'] : null,
         ];
-        return ['top' => $this->analyticsModel->topDiscountsByAction($action, $limit, $filters)];
+        $cacheKey = $this->buildCacheKey('analytics_top', ['action' => $action, 'limit' => $limit] + $filters);
+        $cached = $this->cacheGet($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+        $resp = ['top' => $this->analyticsModel->topDiscountsByAction($action, $limit, $filters)];
+        $this->cacheSet($cacheKey, $resp);
+        return $resp;
     }
 
 	/**
@@ -128,8 +149,49 @@ class AnalyticsService
 			'age_group' => $data['age_group'] ?? null,
 			'gender' => $data['gender'] ?? null,
 		];
-		return ['totals' => $this->analyticsModel->companyTotals($companyId, $filters)];
+        $cacheKey = $this->buildCacheKey('analytics_company_totals', ['company_id' => $companyId] + $filters);
+        $cached = $this->cacheGet($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+        $resp = ['totals' => $this->analyticsModel->companyTotals($companyId, $filters)];
+        $this->cacheSet($cacheKey, $resp);
+        return $resp;
 	}
+
+    /**
+     * Build a cache key from a base and parameters.
+     */
+    private function buildCacheKey(string $base, array $params): string
+    {
+        // Normalize params: sort keys for stable cache keys
+        ksort($params);
+        return 'dh_' . $base . '_' . sha1(json_encode($params));
+    }
+
+    /**
+     * Get value from APCu cache if available.
+     */
+    private function cacheGet(string $key): mixed
+    {
+        if (\function_exists('apcu_fetch')) {
+            $ok = false;
+            /** @var mixed $val */
+            $val = \call_user_func_array('apcu_fetch', [$key, &$ok]);
+            if ($ok) { return $val; }
+        }
+        return null;
+    }
+
+    /**
+     * Set value into APCu cache if available.
+     */
+    private function cacheSet(string $key, mixed $value): void
+    {
+        if (\function_exists('apcu_store')) {
+            \call_user_func('apcu_store', $key, $value, $this->cacheTtl);
+        }
+    }
 }
 
 

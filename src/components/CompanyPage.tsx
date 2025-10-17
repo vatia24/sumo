@@ -17,6 +17,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { apiService } from '../services/api';
+import { useI18n } from '../i18n';
 import { useCompany } from '../contexts/CompanyContext';
 
 interface Company {
@@ -103,6 +104,7 @@ interface CompanyPageProps {
 
 const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
   const { company, loading: companyLoading, error: companyError, refreshCompany } = useCompany();
+  const { t } = useI18n();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -175,7 +177,15 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
   // Refs to scroll into view when opening from sidebar
   const panelRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const dayNames = [
+    t('days.mon'),
+    t('days.tue'),
+    t('days.wed'),
+    t('days.thu'),
+    t('days.fri'),
+    t('days.sat'),
+    t('days.sun')
+  ];
 
   // Form submission handlers
   const handleCompanyUpdate = async () => {
@@ -588,8 +598,8 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-12">
             <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">No Company Selected</h2>
-            <p className="text-gray-600">Please select a company to manage.</p>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">{t('company.noSelected')}</h2>
+            <p className="text-gray-600">{t('company.selectPrompt')}</p>
           </div>
         </div>
       </div>
@@ -600,18 +610,18 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Company Management</h1>
-              <p className="text-gray-600 mt-1">Manage {selectedCompany.full_name}</p>
+                  <h1 className="text-2xl font-bold text-gray-900">{t('company.title')}</h1>
+                  <p className="text-gray-600 mt-1">{t('company.manage').replace('{name}', selectedCompany.full_name)}</p>
             </div>
             {onBack && (
               <button
                 onClick={onBack}
                 className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
               >
-                Back
+                    {t('company.back')}
               </button>
             )}
           </div>
@@ -624,54 +634,54 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
           </div>
         )}
         {/* Layout: Sidebar + Content */}
-        <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
           {/* Sidebar */}
           <aside className="md:sticky md:top-6 h-max">
             <div className="bg-white rounded-lg shadow-sm p-4">
               <div className="mb-3">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Company</h3>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('company.sidebar.company')}</h3>
                 <div className="mt-2 space-y-1">
-                  <button onClick={() => openPanel('profile')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
+                      <button onClick={() => openPanel('profile')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm text-gray-800">Profile</span>
+                        <span className="text-sm text-gray-800">{t('company.sidebar.profile')}</span>
                   </button>
-                  <button onClick={() => openPanel('hours')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
+                      <button onClick={() => openPanel('hours')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
                     <Clock className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm text-gray-800">Business Hours</span>
+                        <span className="text-sm text-gray-800">{t('company.sidebar.hours')}</span>
                   </button>
-                  <button onClick={() => openPanel('contacts')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
+                      <button onClick={() => openPanel('contacts')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
                     <Users className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm text-gray-800">Contacts</span>
+                        <span className="text-sm text-gray-800">{t('company.sidebar.contacts')}</span>
                   </button>
                 </div>
               </div>
               <div className="mb-3">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Presence</h3>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('company.sidebar.presence')}</h3>
                 <div className="mt-2 space-y-1">
                   <button onClick={() => openPanel('social')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
                     <Share2 className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm text-gray-800">Social Media</span>
+                        <span className="text-sm text-gray-800">{t('company.sidebar.social')}</span>
                   </button>
                   <button onClick={() => openPanel('gallery')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
                     <ImageIcon className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm text-gray-800">Gallery</span>
+                        <span className="text-sm text-gray-800">{t('company.sidebar.gallery')}</span>
                   </button>
                   <button onClick={() => openPanel('documents')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
                     <FileText className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm text-gray-800">Documents</span>
+                        <span className="text-sm text-gray-800">{t('company.sidebar.documents')}</span>
                   </button>
                 </div>
               </div>
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Operations</h3>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('company.sidebar.operations')}</h3>
                 <div className="mt-2 space-y-1">
                   <button onClick={() => openPanel('zones')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
                     <Map className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm text-gray-800">Delivery Zones</span>
+                        <span className="text-sm text-gray-800">{t('company.sidebar.zones')}</span>
                   </button>
                   <button onClick={() => openPanel('branches')} className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm text-gray-800">Branches</span>
+                        <span className="text-sm text-gray-800">{t('company.sidebar.branches')}</span>
                   </button>
                 </div>
               </div>
@@ -683,20 +693,20 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
             {/* CollapsibleSection component */}
             <CollapsibleSection
               id="profile"
-              title="Company Profile"
+              title={t('company.profile.title')}
               icon={<Building2 className="h-4 w-4" />}
               open={openPanels.has('profile')}
               onToggle={() => togglePanel('profile')}
               containerRef={(el: HTMLDivElement | null) => (panelRefs.current['profile'] = el)}
             >
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-medium text-gray-900">Company Profile</h2>
+                <h2 className="text-lg font-medium text-gray-900">{t('company.profile.title')}</h2>
                 <button
                   onClick={() => setIsEditing(!isEditing)}
                   className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   <Edit3 className="h-4 w-4" />
-                  {isEditing ? 'Cancel' : 'Edit'}
+                  {isEditing ? t('common.cancel') : t('company.profile.edit')}
                 </button>
               </div>
               
@@ -704,7 +714,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                 <form onSubmit={(e) => { e.preventDefault(); handleCompanyUpdate(); }} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.profile.companyName')}</label>
                       <input
                         type="text"
                         value={companyForm.full_name}
@@ -714,7 +724,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.profile.address')}</label>
                       <input
                         type="text"
                         value={companyForm.address}
@@ -723,7 +733,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.profile.city')}</label>
                       <input
                         type="text"
                         value={companyForm.city}
@@ -732,7 +742,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.profile.postalCode')}</label>
                       <input
                         type="text"
                         value={companyForm.postal_code}
@@ -741,7 +751,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.profile.country')}</label>
                       <input
                         type="text"
                         value={companyForm.country}
@@ -755,25 +765,25 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                       type="submit"
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
-                      Update Company
+                      {t('company.profile.update')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setIsEditing(false)}
                       className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                   </div>
                 </form>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Company Name</h3>
+                    <h3 className="text-sm font-medium text-gray-500">{t('company.profile.companyName')}</h3>
                     <p className="text-sm text-gray-900 mt-1">{selectedCompany.full_name}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Status</h3>
+                    <h3 className="text-sm font-medium text-gray-500">{t('company.profile.status')}</h3>
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-1 ${
                       selectedCompany.status === 'verified' 
                         ? 'bg-green-100 text-green-800' 
@@ -785,20 +795,20 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                     </span>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Address</h3>
-                    <p className="text-sm text-gray-900 mt-1">{selectedCompany.address || 'Not specified'}</p>
+                    <h3 className="text-sm font-medium text-gray-500">{t('company.profile.address')}</h3>
+                    <p className="text-sm text-gray-900 mt-1">{selectedCompany.address || t('common.notSpecified')}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">City</h3>
-                    <p className="text-sm text-gray-900 mt-1">{selectedCompany.city || 'Not specified'}</p>
+                    <h3 className="text-sm font-medium text-gray-500">{t('company.profile.city')}</h3>
+                    <p className="text-sm text-gray-900 mt-1">{selectedCompany.city || t('common.notSpecified')}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Postal Code</h3>
-                    <p className="text-sm text-gray-900 mt-1">{selectedCompany.postal_code || 'Not specified'}</p>
+                    <h3 className="text-sm font-medium text-gray-500">{t('company.profile.postalCode')}</h3>
+                    <p className="text-sm text-gray-900 mt-1">{selectedCompany.postal_code || t('common.notSpecified')}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Country</h3>
-                    <p className="text-sm text-gray-900 mt-1">{selectedCompany.country || 'Not specified'}</p>
+                    <h3 className="text-sm font-medium text-gray-500">{t('company.profile.country')}</h3>
+                    <p className="text-sm text-gray-900 mt-1">{selectedCompany.country || t('common.notSpecified')}</p>
                   </div>
                 </div>
               )}
@@ -806,7 +816,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
 
             <CollapsibleSection
               id="hours"
-              title="Business Hours"
+              title={t('company.hours.title')}
               icon={<Clock className="h-4 w-4" />}
               open={openPanels.has('hours')}
               onToggle={() => togglePanel('hours')}
@@ -815,18 +825,18 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
               {loadingTabs.has('hours') ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
-                  <span className="ml-3 text-gray-600">Loading business hours...</span>
+                  <span className="ml-3 text-gray-600">{t('common.loading')}</span>
                 </div>
               ) : (
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium text-gray-900">Business Hours</h2>
+                    <h2 className="text-lg font-medium text-gray-900">{t('company.hours.title')}</h2>
                     <button
                       onClick={() => setIsEditing(!isEditing)}
                       className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
                       <Edit3 className="h-4 w-4" />
-                      {isEditing ? 'Cancel' : 'Edit Hours'}
+                      {isEditing ? t('common.cancel') : t('company.hours.edit')}
                     </button>
                   </div>
                   
@@ -873,7 +883,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                                   }}
                                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                 />
-                                <span className="text-sm text-gray-700">Closed</span>
+                                <span className="text-sm text-gray-700">{t('company.hours.closed')}</span>
                               </label>
                             </div>
                           </div>
@@ -884,14 +894,14 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                           type="submit"
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                         >
-                          Update Hours
+                          {t('common.update')}
                         </button>
                         <button
                           type="button"
                           onClick={() => setIsEditing(false)}
                           className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
                         >
-                          Cancel
+                          {t('common.cancel')}
                         </button>
                       </div>
                     </form>
@@ -908,7 +918,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                           <span className={`px-2 py-1 text-xs rounded-full ${
                             hour.is_closed ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                           }`}>
-                            {hour.is_closed ? 'Closed' : 'Open'}
+                            {hour.is_closed ? t('company.hours.closed') : t('company.hours.open')}
                           </span>
                         </div>
                       ))}
@@ -920,7 +930,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
 
             <CollapsibleSection
               id="contacts"
-              title="Company Contacts"
+              title={t('company.contacts.title')}
               icon={<Users className="h-4 w-4" />}
               open={openPanels.has('contacts')}
               onToggle={() => togglePanel('contacts')}
@@ -929,12 +939,12 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
               {loadingTabs.has('contacts') ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
-                  <span className="ml-3 text-gray-600">Loading contacts...</span>
+                  <span className="ml-3 text-gray-600">{t('common.loading')}</span>
                 </div>
               ) : (
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium text-gray-900">Company Contacts</h2>
+                    <h2 className="text-lg font-medium text-gray-900">{t('company.contacts.title')}</h2>
                     <button
                       onClick={() => setShowAddContact(!showAddContact)}
                       className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -946,35 +956,35 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                   
                   {showAddContact && (
                     <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                      <h3 className="text-md font-medium text-gray-900 mb-3">Add New Contact</h3>
+                      <h3 className="text-md font-medium text-gray-900 mb-3">{t('company.contacts.add')}</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.contacts.phone')}</label>
                           <input
                             type="tel"
                             value={contactForm.phone}
                             onChange={(e) => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
-                            placeholder="e.g., +1-555-123-4567"
+                            placeholder={t('placeholder.phoneExample')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.contacts.email')}</label>
                           <input
                             type="email"
                             value={contactForm.email}
                             onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
-                            placeholder="e.g., contact@company.com"
+                            placeholder={t('placeholder.emailExample')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
                         <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.contacts.address')}</label>
                           <input
                             type="text"
                             value={contactForm.address}
                             onChange={(e) => setContactForm(prev => ({ ...prev, address: e.target.value }))}
-                            placeholder="e.g., 123 Business St, City, State, ZIP"
+                            placeholder={t('placeholder.addressExample')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
@@ -1023,7 +1033,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                         <button
                           onClick={() => handleDeleteContact(contact.id)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                          title="Delete"
+                          title={t('common.delete')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -1036,7 +1046,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
 
             <CollapsibleSection
               id="social"
-              title="Social Media"
+              title={t('company.sidebar.social')}
               icon={<Share2 className="h-4 w-4" />}
               open={openPanels.has('social')}
               onToggle={() => togglePanel('social')}
@@ -1045,12 +1055,12 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
               {loadingTabs.has('social') ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
-                  <span className="ml-3 text-gray-600">Loading social media...</span>
+                  <span className="ml-3 text-gray-600">{t('common.loading')}</span>
                 </div>
               ) : (
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium text-gray-900">Social Media</h2>
+                    <h2 className="text-lg font-medium text-gray-900">{t('company.sidebar.social')}</h2>
                     <button
                       onClick={() => setShowAddSocial(!showAddSocial)}
                       className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -1062,15 +1072,15 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                   
                   {showAddSocial && (
                     <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                      <h3 className="text-md font-medium text-gray-900 mb-3">Add New Social Media</h3>
+                      <h3 className="text-md font-medium text-gray-900 mb-3">{t('company.social.add')}</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.social.platform')}</label>
                           <input
                             type="text"
                             value={socialForm.platform}
                             onChange={(e) => setSocialForm(prev => ({ ...prev, platform: e.target.value }))}
-                            placeholder="e.g., Facebook, Instagram, Twitter"
+                            placeholder={t('placeholder.socialPlatforms')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             required
                           />
@@ -1081,7 +1091,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                             type="url"
                             value={socialForm.url}
                             onChange={(e) => setSocialForm(prev => ({ ...prev, url: e.target.value }))}
-                            placeholder="https://..."
+                            placeholder={t('placeholder.url')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             required
                           />
@@ -1116,7 +1126,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                         <button
                           onClick={() => handleDeleteSocial(social.id)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                          title="Delete"
+                          title={t('common.delete')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -1129,7 +1139,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
 
             <CollapsibleSection
               id="gallery"
-              title="Company Gallery"
+              title={t('company.gallery.title')}
               icon={<ImageIcon className="h-4 w-4" />}
               open={openPanels.has('gallery')}
               onToggle={() => togglePanel('gallery')}
@@ -1138,12 +1148,12 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
               {loadingTabs.has('gallery') ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
-                  <span className="ml-3 text-gray-600">Loading gallery...</span>
+                  <span className="ml-3 text-gray-600">{t('common.loading')}</span>
                 </div>
               ) : (
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium text-gray-900">Company Gallery</h2>
+                    <h2 className="text-lg font-medium text-gray-900">{t('company.gallery.title')}</h2>
                     <button
                       onClick={() => setShowAddGallery(!showAddGallery)}
                       className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -1155,9 +1165,9 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                   
                   {showAddGallery && (
                     <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                      <h3 className="text-md font-medium text-gray-900 mb-3">Add New Image</h3>
+                      <h3 className="text-md font-medium text-gray-900 mb-3">{t('company.gallery.add')}</h3>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Image File</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.gallery.imageFile')}</label>
                         <input
                           type="file"
                           accept="image/*"
@@ -1195,7 +1205,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                         <button
                           onClick={() => handleDeleteGallery(image.id)}
                           className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Delete"
+                          title={t('common.delete')}
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -1208,7 +1218,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
 
             <CollapsibleSection
               id="documents"
-              title="Company Documents"
+              title={t('company.documents.title')}
               icon={<FileText className="h-4 w-4" />}
               open={openPanels.has('documents')}
               onToggle={() => togglePanel('documents')}
@@ -1217,12 +1227,12 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
               {loadingTabs.has('documents') ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
-                  <span className="ml-3 text-gray-600">Loading documents...</span>
+                  <span className="ml-3 text-gray-600">{t('common.loading')}</span>
                 </div>
               ) : (
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium text-gray-900">Company Documents</h2>
+                    <h2 className="text-lg font-medium text-gray-900">{t('company.documents.title')}</h2>
                     <button
                       onClick={() => setShowAddDocument(!showAddDocument)}
                       className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -1234,21 +1244,21 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                   
                   {showAddDocument && (
                     <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                      <h3 className="text-md font-medium text-gray-900 mb-3">Add New Document</h3>
+                      <h3 className="text-md font-medium text-gray-900 mb-3">{t('company.documents.add')}</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Document Type</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.documents.type')}</label>
                           <input
                             type="text"
                             value={documentForm.doc_type}
                             onChange={(e) => setDocumentForm(prev => ({ ...prev, doc_type: e.target.value }))}
-                            placeholder="e.g., Business License, Tax Certificate"
+                            placeholder={t('placeholder.docTypeExample')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             required
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Document File</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.documents.file')}</label>
                           <input
                             type="file"
                             accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
@@ -1264,7 +1274,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                           disabled={uploading || !documentForm.doc_type || !documentForm.file}
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                         >
-                          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add Document'}
+                          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('company.documents.add')}
                         </button>
                         <button
                           onClick={() => setShowAddDocument(false)}
@@ -1281,12 +1291,12 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                       <div key={document.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                         <div>
                           <h4 className="font-medium text-gray-900">{document.doc_type}</h4>
-                          <p className="text-sm text-gray-500">Status: {document.status}</p>
+                          <p className="text-sm text-gray-500">{t('company.documents.status')}: {document.status}</p>
                         </div>
                         <button
                           onClick={() => handleDeleteDocument(document.id)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                          title="Delete"
+                          title={t('common.delete')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -1299,7 +1309,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
 
             <CollapsibleSection
               id="zones"
-              title="Delivery Zones"
+              title={t('company.zones.title')}
               icon={<Map className="h-4 w-4" />}
               open={openPanels.has('zones')}
               onToggle={() => togglePanel('zones')}
@@ -1308,12 +1318,12 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
               {loadingTabs.has('zones') ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
-                  <span className="ml-3 text-gray-600">Loading delivery zones...</span>
+                  <span className="ml-3 text-gray-600">{t('common.loading')}</span>
                 </div>
               ) : (
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium text-gray-900">Delivery Zones</h2>
+                    <h2 className="text-lg font-medium text-gray-900">{t('company.zones.title')}</h2>
                     <button
                       onClick={() => setShowAddZone(!showAddZone)}
                       className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -1325,60 +1335,60 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                   
                   {showAddZone && (
                     <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                      <h3 className="text-md font-medium text-gray-900 mb-3">Add New Delivery Zone</h3>
+                      <h3 className="text-md font-medium text-gray-900 mb-3">{t('company.zones.add')}</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Zone Name</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.zones.name')}</label>
                           <input
                             type="text"
                             value={zoneForm.name}
                             onChange={(e) => setZoneForm(prev => ({ ...prev, name: e.target.value }))}
-                            placeholder="e.g., Downtown, North Area"
+                            placeholder={t('placeholder.zoneNameExample')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             required
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Zone Type</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.zones.type')}</label>
                           <select
                             value={zoneForm.zone_type}
                             onChange={(e) => setZoneForm(prev => ({ ...prev, zone_type: e.target.value as 'radius' | 'polygon' }))}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           >
-                            <option value="radius">Radius</option>
-                            <option value="polygon">Polygon</option>
+                            <option value="radius">{t('company.zones.typeRadius')}</option>
+                            <option value="polygon">{t('company.zones.typePolygon')}</option>
                           </select>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Center Latitude</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.zones.centerLat')}</label>
                           <input
                             type="number"
                             step="0.000001"
                             value={zoneForm.center_lat}
                             onChange={(e) => setZoneForm(prev => ({ ...prev, center_lat: e.target.value }))}
-                            placeholder="e.g., 40.7128"
+                            placeholder={t('placeholder.latExample')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Center Longitude</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.zones.centerLng')}</label>
                           <input
                             type="number"
                             step="0.000001"
                             value={zoneForm.center_lng}
                             onChange={(e) => setZoneForm(prev => ({ ...prev, center_lng: e.target.value }))}
-                            placeholder="e.g., -74.0060"
+                            placeholder={t('placeholder.lngExample')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
                         {zoneForm.zone_type === 'radius' && (
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Radius (meters)</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.zones.radius')}</label>
                             <input
                               type="number"
                               value={zoneForm.radius_m}
                               onChange={(e) => setZoneForm(prev => ({ ...prev, radius_m: e.target.value }))}
-                              placeholder="e.g., 5000"
+                              placeholder={t('placeholder.radiusExample')}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                           </div>
@@ -1407,15 +1417,15 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                       <div key={zone.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                         <div>
                           <h4 className="font-medium text-gray-900">{zone.name}</h4>
-                          <p className="text-sm text-gray-500">Type: {zone.zone_type}</p>
+                          <p className="text-sm text-gray-500">{t('company.zones.type')}: {zone.zone_type}</p>
                           {zone.zone_type === 'radius' && zone.radius_m && (
-                            <p className="text-sm text-gray-500">Radius: {zone.radius_m}m</p>
+                            <p className="text-sm text-gray-500">{t('company.zones.radius')}: {zone.radius_m}m</p>
                           )}
                         </div>
                         <button
                           onClick={() => handleDeleteZone(zone.id)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                          title="Delete"
+                          title={t('common.delete')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -1428,7 +1438,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
 
             <CollapsibleSection
               id="branches"
-              title="Company Branches"
+              title={t('company.branches.title')}
               icon={<MapPin className="h-4 w-4" />}
               open={openPanels.has('branches')}
               onToggle={() => togglePanel('branches')}
@@ -1437,12 +1447,12 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
               {loadingTabs.has('branches') ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
-                  <span className="ml-3 text-gray-600">Loading branches...</span>
+                  <span className="ml-3 text-gray-600">{t('common.loading')}</span>
                 </div>
               ) : (
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium text-gray-900">Company Branches</h2>
+                    <h2 className="text-lg font-medium text-gray-900">{t('company.branches.title')}</h2>
                     <button
                       onClick={() => setShowAddBranch(!showAddBranch)}
                       className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -1454,31 +1464,31 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                   
                   {showAddBranch && (
                     <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                      <h3 className="text-md font-medium text-gray-900 mb-3">Add New Branch</h3>
+                      <h3 className="text-md font-medium text-gray-900 mb-3">{t('company.branches.add')}</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Branch Name</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.branches.name')}</label>
                           <input
                             type="text"
                             value={branchForm.branch_name}
                             onChange={(e) => setBranchForm(prev => ({ ...prev, branch_name: e.target.value }))}
-                            placeholder="e.g., Downtown Branch, North Location"
+                            placeholder={t('placeholder.branchNameExample')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             required
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Branch Address</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.branches.address')}</label>
                           <input
                             type="text"
                             value={branchForm.branch_address}
                             onChange={(e) => setBranchForm(prev => ({ ...prev, branch_address: e.target.value }))}
-                            placeholder="e.g., 123 Main St, City, State"
+                            placeholder={t('placeholder.branchAddressExample')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Branch Image</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('company.branches.image')}</label>
                           <input
                             type="file"
                             accept="image/*"
@@ -1515,7 +1525,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onBack }) => {
                         <button
                           onClick={() => handleDeleteBranch(branch.id)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                          title="Delete"
+                          title={t('common.delete')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
